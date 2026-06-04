@@ -44,6 +44,59 @@ export async function getDrawState() {
   return {
     drawCompleted: !!s?.drawCompletedAt,
     prizeText: s?.prizeText ?? "Bragging rights 🏆",
-    potText: s?.potText ?? null,
+    logoUrl: s?.logoUrl ?? null,
+    bgUrl: s?.bgUrl ?? null,
+  };
+}
+
+const LIVE_STATUSES = ["IN_PLAY", "PAUSED", "LIVE", "1H", "2H", "ET", "HT", "BT", "P"];
+
+export type FeaturedMatch =
+  | {
+      state: "live" | "upcoming";
+      round: string;
+      status: string;
+      kickoff: string;
+      home: { name: string; logo: string | null };
+      away: { name: string; logo: string | null };
+      homeGoals: number | null;
+      awayGoals: number | null;
+    }
+  | { state: "none" };
+
+// The match to feature in the banner: a live game if there is one, else the next one.
+export async function getFeaturedMatch(): Promise<FeaturedMatch> {
+  const include = { homeTeam: true, awayTeam: true } as const;
+
+  const live = await prisma.fixture.findFirst({
+    where: { status: { in: LIVE_STATUSES }, homeTeamId: { not: null }, awayTeamId: { not: null } },
+    include,
+    orderBy: { kickoff: "asc" },
+  });
+
+  const fixture =
+    live ??
+    (await prisma.fixture.findFirst({
+      where: {
+        finished: false,
+        status: { notIn: LIVE_STATUSES },
+        homeTeamId: { not: null },
+        awayTeamId: { not: null },
+      },
+      include,
+      orderBy: { kickoff: "asc" },
+    }));
+
+  if (!fixture || !fixture.homeTeam || !fixture.awayTeam) return { state: "none" };
+
+  return {
+    state: live ? "live" : "upcoming",
+    round: fixture.round,
+    status: fixture.status,
+    kickoff: fixture.kickoff.toISOString(),
+    home: { name: fixture.homeTeam.name, logo: fixture.homeTeam.logoUrl },
+    away: { name: fixture.awayTeam.name, logo: fixture.awayTeam.logoUrl },
+    homeGoals: fixture.homeGoals,
+    awayGoals: fixture.awayGoals,
   };
 }

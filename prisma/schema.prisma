@@ -81,6 +81,8 @@ model Setting {
   prizeText       String    @default("Bragging rights 🏆")
   potText         String?
   scoring         Json? // editable scoring config; defaults applied in code
+  logoUrl         String? // optional header logo image (defaults to a trophy emoji)
+  bgUrl           String? // optional page background image
   drawCompletedAt DateTime?
   leagueId        Int       @default(1) // API-Football: World Cup = 1
   season          Int       @default(2026)

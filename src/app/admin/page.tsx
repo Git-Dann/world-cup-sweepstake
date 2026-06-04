@@ -8,6 +8,7 @@ import {
   addPlayersAction,
   removePlayerAction,
   updatePrizeAction,
+  updateBrandingAction,
   runDrawAction,
   resetDrawAction,
   syncNowAction,
@@ -151,6 +152,37 @@ export default async function AdminPage({
             </label>
             <button type="submit" className={`${primaryBtn} self-start`} style={{ background: GOLD }}>
               Save
+            </button>
+          </form>
+        </section>
+
+        {/* Branding */}
+        <section className={card}>
+          <h2 className="mb-2 text-lg font-bold">Branding</h2>
+          <p className="mb-4 text-sm text-slate-400">
+            Optional. Paste an image URL, or drop a file in <code className="text-slate-300">/public</code> and use a path like <code className="text-slate-300">/logo.png</code>.
+          </p>
+          <form action={updateBrandingAction} className="flex flex-col gap-3">
+            <label className="text-sm text-slate-400">
+              Header logo <span className="text-slate-500">(above &ldquo;2026&rdquo; — blank = 🏆)</span>
+              <input
+                name="logoUrl"
+                defaultValue={settings.logoUrl ?? ""}
+                placeholder="https://…/logo.png"
+                className="mt-1 w-full rounded-lg bg-white/5 px-3 py-2 text-sm text-white outline-none ring-1 ring-white/10 focus:ring-2"
+              />
+            </label>
+            <label className="text-sm text-slate-400">
+              Background image <span className="text-slate-500">(blank = plain navy)</span>
+              <input
+                name="bgUrl"
+                defaultValue={settings.bgUrl ?? ""}
+                placeholder="https://…/background.jpg"
+                className="mt-1 w-full rounded-lg bg-white/5 px-3 py-2 text-sm text-white outline-none ring-1 ring-white/10 focus:ring-2"
+              />
+            </label>
+            <button type="submit" className={`${primaryBtn} self-start`} style={{ background: GOLD }}>
+              Save branding
             </button>
           </form>
         </section>

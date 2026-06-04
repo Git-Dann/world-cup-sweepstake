@@ -59,6 +59,15 @@ export async function updatePrizeAction(formData: FormData) {
   refresh();
 }
 
+export async function updateBrandingAction(formData: FormData) {
+  await assertAdmin();
+  const logoUrl = String(formData.get("logoUrl") ?? "").trim() || null;
+  const bgUrl = String(formData.get("bgUrl") ?? "").trim() || null;
+  await ensureSettings();
+  await prisma.setting.update({ where: { id: 1 }, data: { logoUrl, bgUrl } });
+  refresh();
+}
+
 export async function runDrawAction() {
   await assertAdmin();
   await runDraw();
