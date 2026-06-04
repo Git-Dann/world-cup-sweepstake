@@ -31,7 +31,9 @@ export type FdMatch = {
   awayTeam: { id: number | null; name: string | null; crest: string | null };
   score: {
     winner: "HOME_TEAM" | "AWAY_TEAM" | "DRAW" | null;
+    duration?: string; // REGULAR, EXTRA_TIME, PENALTY_SHOOTOUT
     fullTime: { home: number | null; away: number | null };
+    penalties?: { home: number | null; away: number | null };
   };
 };
 

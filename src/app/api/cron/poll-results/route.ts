@@ -72,6 +72,16 @@ async function handle(req: NextRequest) {
       await prisma.fixture.update({ where: { id: f.id }, data: { resultPosted: true } });
       continue;
     }
+    const statusLabel =
+      f.duration === "PENALTY_SHOOTOUT"
+        ? "PENALTIES"
+        : f.duration === "EXTRA_TIME"
+          ? "AFTER EXTRA TIME"
+          : "FULL TIME";
+    const note =
+      f.duration === "PENALTY_SHOOTOUT" && f.penHome != null && f.penAway != null
+        ? `${f.penHome}–${f.penAway} on penalties`
+        : "";
     const mp = new URLSearchParams({
       home: f.homeTeam.name,
       away: f.awayTeam.name,
@@ -82,11 +92,13 @@ async function handle(req: NextRequest) {
       ao: f.awayTeam.owner?.name ?? "",
       hf: f.homeTeam.flagUrl ?? "",
       af: f.awayTeam.flagUrl ?? "",
+      status: statusLabel,
+      note,
     });
     const ok = await postToSlack(
       resultMessage({
         finished: true,
-        statusLabel: "FULL TIME",
+        statusLabel,
         round: f.round,
         base,
         imageUrl: base ? `${base}/api/og/match?${mp.toString()}` : undefined,

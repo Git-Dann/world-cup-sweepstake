@@ -55,3 +55,13 @@ export function flagUrlForTeam(name: string): string | null {
   const code = NAME_TO_ISO2[name];
   return code ? `https://flagcdn.com/w320/${code}.png` : null;
 }
+
+// Unicode flag emoji for Slack text (regional-indicator pairs; GB subdivisions use tag sequences).
+export function flagEmojiForTeam(name: string): string {
+  const code = NAME_TO_ISO2[name];
+  if (!code) return "🏳️";
+  if (code === "gb-eng") return "🏴󠁧󠁢󠁥󠁮󠁧󠁿";
+  if (code === "gb-sct") return "🏴󠁧󠁢󠁳󠁣󠁴󠁿";
+  if (code.length !== 2) return "🏳️";
+  return String.fromCodePoint(...[...code.toUpperCase()].map((c) => 0x1f1e6 + c.charCodeAt(0) - 65));
+}

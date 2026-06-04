@@ -9,6 +9,9 @@ import { syncAll } from "@/lib/tournament-sync";
 import { seedDemo, clearAllData } from "@/lib/demo-seed";
 import { recomputeAllScores } from "@/lib/score-engine";
 import { ensureSettings, getScoring } from "@/lib/settings";
+import { getLeaderboard } from "@/lib/leaderboard";
+import { flagEmojiForTeam } from "@/lib/flags";
+import { drawMessage, postToSlack } from "@/lib/slack";
 
 async function assertAdmin() {
   if (!(await isAdmin())) throw new Error("Not authorised");
@@ -68,9 +71,23 @@ export async function updateBrandingAction(formData: FormData) {
   refresh();
 }
 
+async function announceDraw() {
+  const rows = await getLeaderboard();
+  await postToSlack(
+    drawMessage({
+      base: process.env.NEXT_PUBLIC_APP_URL ?? "",
+      players: rows.map((r) => ({
+        name: r.name,
+        teams: r.teams.map((t) => ({ name: t.name, emoji: flagEmojiForTeam(t.name) })),
+      })),
+    }),
+  );
+}
+
 export async function runDrawAction() {
   await assertAdmin();
   await runDraw();
+  await announceDraw();
   refresh();
 }
 

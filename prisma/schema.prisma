@@ -53,7 +53,10 @@ model Fixture {
   awayTeam        Team?    @relation("AwayTeam", fields: [awayTeamId], references: [id])
   homeGoals       Int?
   awayGoals       Int?
-  winnerTeamApiId Int? // API-Football id of the winner (knockouts)
+  winnerTeamApiId Int? // football-data id of the winner (knockouts)
+  duration        String? // REGULAR, EXTRA_TIME, PENALTY_SHOOTOUT
+  penHome         Int?
+  penAway         Int?
   finished        Boolean  @default(false)
   pointsProcessed Boolean  @default(false) // group W/D/L points awarded
   resultPosted    Boolean  @default(false) // result posted to Slack

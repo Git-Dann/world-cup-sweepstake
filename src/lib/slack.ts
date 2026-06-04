@@ -49,7 +49,7 @@ export function resultMessage(args: {
   const { finished, statusLabel, round, home, away, base, imageUrl } = args;
   const hg = home.goals ?? 0;
   const ag = away.goals ?? 0;
-  const head = finished ? `⚽ FULL TIME — ${round}` : `🔴 ${statusLabel} — ${round}`;
+  const head = `${finished ? "⚽" : "🔴"} ${statusLabel} — ${round}`;
 
   const ownerLine = (t: TeamLine) => `*${t.name}* — ${t.owner ?? "_unowned_"} · ${pts(t.points)}`;
 
@@ -123,4 +123,32 @@ export function fixturesPreviewMessage(args: {
       { type: "section", text: { type: "mrkdwn", text: lines || "_No matches today._" } },
     ],
   };
+}
+
+// The draw reveal — who got which teams, with flag emojis.
+export function drawMessage(args: {
+  base: string;
+  players: { name: string; teams: { name: string; emoji: string }[] }[];
+}) {
+  const lines = args.players.map(
+    (p) => `*${p.name}* — ${p.teams.map((t) => `${t.emoji} ${t.name}`).join("  ·  ") || "_no teams_"}`,
+  );
+  const blocks: SlackBlock[] = [
+    { type: "header", text: { type: "plain_text", text: "🎲 The Draw is in!", emoji: true } },
+    {
+      type: "context",
+      elements: [{ type: "mrkdwn", text: "*World Cup 2026 · Office Sweepstake* — here's who's got who 👇" }],
+    },
+    { type: "divider" },
+  ];
+  for (let i = 0; i < lines.length; i += 12) {
+    blocks.push({ type: "section", text: { type: "mrkdwn", text: lines.slice(i, i + 12).join("\n") } });
+  }
+  if (args.base) {
+    blocks.push({
+      type: "context",
+      elements: [{ type: "mrkdwn", text: `<${args.base}|See the live leaderboard ↗>  ·  May the best teams win! 🏆` }],
+    });
+  }
+  return { text: "🎲 The World Cup sweepstake draw is in!", blocks };
 }

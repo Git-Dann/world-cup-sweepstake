@@ -21,6 +21,7 @@ export async function GET(req: Request) {
   const hf = q.get("hf") ?? "";
   const af = q.get("af") ?? "";
   const status = q.get("status") ?? "FULL TIME";
+  const note = q.get("note") ?? "";
 
   const side = (name: string, owner: string, flag: string) => (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: 300, gap: 14 }}>
@@ -58,10 +59,13 @@ export async function GET(req: Request) {
 
         <div style={{ display: "flex", flex: 1, alignItems: "center", justifyContent: "space-between" }}>
           {side(home, ho, hf)}
-          <div style={{ display: "flex", alignItems: "center", fontSize: 84, fontWeight: 900, color: GOLD }}>
-            <span style={{ display: "flex" }}>{hg}</span>
-            <span style={{ display: "flex", color: "#3a4567", margin: "0 14px" }}>–</span>
-            <span style={{ display: "flex" }}>{ag}</span>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", fontSize: 84, fontWeight: 900, color: GOLD }}>
+              <span style={{ display: "flex" }}>{hg}</span>
+              <span style={{ display: "flex", color: "#3a4567", margin: "0 14px" }}>–</span>
+              <span style={{ display: "flex" }}>{ag}</span>
+            </div>
+            {note ? <div style={{ display: "flex", fontSize: 22, color: "#8b95b5" }}>{note}</div> : <div style={{ display: "flex" }} />}
           </div>
           {side(away, ao, af)}
         </div>

@@ -62,6 +62,9 @@ export async function syncFixtures() {
       homeGoals: m.score.fullTime.home,
       awayGoals: m.score.fullTime.away,
       winnerTeamApiId: winnerApiId,
+      duration: m.score.duration ?? null,
+      penHome: m.score.penalties?.home ?? null,
+      penAway: m.score.penalties?.away ?? null,
       finished: FD_FINISHED.has(m.status),
     };
 
