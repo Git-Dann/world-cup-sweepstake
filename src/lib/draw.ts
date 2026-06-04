@@ -10,19 +10,27 @@ export async function runDraw() {
   if (teams.length === 0) throw new Error("Teams haven't been synced yet.");
 
   // Fisher–Yates shuffle
-  const shuffled = [...teams];
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-  }
+  const shuffle = <T>(arr: T[]): T[] => {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  };
+
+  // Shuffle BOTH teams AND players, so when 48 doesn't divide evenly the extra
+  // team(s) land on random players — not whoever happens to be first in the list.
+  const shuffledTeams = shuffle(teams);
+  const shuffledPlayers = shuffle(players);
 
   // Deal round-robin so the split is even (differ by at most 1).
   await prisma.$transaction([
     prisma.team.updateMany({ data: { ownerId: null } }),
-    ...shuffled.map((team, idx) =>
+    ...shuffledTeams.map((team, idx) =>
       prisma.team.update({
         where: { id: team.id },
-        data: { ownerId: players[idx % players.length].id },
+        data: { ownerId: shuffledPlayers[idx % shuffledPlayers.length].id },
       }),
     ),
     prisma.setting.update({
@@ -31,7 +39,7 @@ export async function runDraw() {
     }),
   ]);
 
-  return { players: players.length, teams: shuffled.length };
+  return { players: players.length, teams: shuffledTeams.length };
 }
 
 export async function resetDraw() {
