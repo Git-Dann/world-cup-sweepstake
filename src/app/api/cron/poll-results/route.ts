@@ -66,12 +66,22 @@ async function handle(req: NextRequest) {
       await prisma.fixture.update({ where: { id: f.id }, data: { resultPosted: true } });
       continue;
     }
+    const mp = new URLSearchParams({
+      home: f.homeTeam.name,
+      away: f.awayTeam.name,
+      hg: String(f.homeGoals ?? 0),
+      ag: String(f.awayGoals ?? 0),
+      round: f.round,
+      ho: f.homeTeam.owner?.name ?? "",
+      ao: f.awayTeam.owner?.name ?? "",
+    });
     const ok = await postToSlack(
       resultMessage({
         finished: true,
         statusLabel: "FULL TIME",
         round: f.round,
         base,
+        imageUrl: base ? `${base}/api/og/match?${mp.toString()}` : undefined,
         home: {
           name: f.homeTeam.name,
           logo: f.homeTeam.logoUrl,

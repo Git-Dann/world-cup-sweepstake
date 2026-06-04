@@ -131,26 +131,22 @@ export default async function Home() {
   return (
     <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-14">
       <header className="mb-12 text-center sm:mb-16">
-        <div className="mb-1 text-4xl sm:text-5xl">🏆</div>
-        <h1
-          className="text-6xl font-black leading-none tracking-tight sm:text-8xl"
-          style={{ backgroundImage: RAINBOW, WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" }}
-        >
-          2026
-        </h1>
-        <div className="mt-2 text-[11px] font-semibold uppercase tracking-[0.35em] text-slate-300 sm:text-sm">
-          World Cup · Office Sweepstake
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="https://crests.football-data.org/wm26.png"
+          alt="FIFA World Cup 2026"
+          width={160}
+          height={160}
+          className="mx-auto h-28 w-auto sm:h-36"
+        />
+        <div className="mt-3 text-xs font-semibold uppercase tracking-[0.35em] text-slate-300 sm:text-sm">
+          Office Sweepstake
         </div>
         <div className="mx-auto mt-5 h-1 w-40 rounded-full" style={{ backgroundImage: RAINBOW }} />
         <div className="mt-6 flex flex-wrap justify-center gap-3">
           <span className="rounded-full bg-white/5 px-4 py-1.5 text-sm ring-1 ring-white/10">
             🎁 Prize: <span className="font-semibold">{draw.prizeText}</span>
           </span>
-          {draw.potText && (
-            <span className="rounded-full bg-white/5 px-4 py-1.5 text-sm text-slate-300 ring-1 ring-white/10">
-              {draw.potText}
-            </span>
-          )}
         </div>
       </header>
 

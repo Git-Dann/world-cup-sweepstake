@@ -51,20 +51,11 @@ export async function removePlayerAction(formData: FormData) {
   refresh();
 }
 
-export async function togglePaidAction(formData: FormData) {
-  await assertAdmin();
-  const id = String(formData.get("id"));
-  const player = await prisma.player.findUnique({ where: { id } });
-  if (player) await prisma.player.update({ where: { id }, data: { paid: !player.paid } });
-  refresh();
-}
-
 export async function updatePrizeAction(formData: FormData) {
   await assertAdmin();
   const prizeText = String(formData.get("prizeText") ?? "").trim() || "Bragging rights 🏆";
-  const potText = String(formData.get("potText") ?? "").trim() || null;
   await ensureSettings();
-  await prisma.setting.update({ where: { id: 1 }, data: { prizeText, potText } });
+  await prisma.setting.update({ where: { id: 1 }, data: { prizeText } });
   refresh();
 }
 

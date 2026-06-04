@@ -36,37 +36,42 @@ export type TeamLine = {
 
 const pts = (n: number) => `${n} pt${n === 1 ? "" : "s"}`;
 
-// A single match result / live update.
+// A single match result / live update. `imageUrl` is the rendered scoreboard graphic.
 export function resultMessage(args: {
   finished: boolean;
   statusLabel: string;
   round: string;
   base: string;
+  imageUrl?: string;
   home: TeamLine;
   away: TeamLine;
 }) {
-  const { finished, statusLabel, round, home, away, base } = args;
+  const { finished, statusLabel, round, home, away, base, imageUrl } = args;
   const hg = home.goals ?? 0;
   const ag = away.goals ?? 0;
   const head = finished ? `⚽ FULL TIME — ${round}` : `🔴 ${statusLabel} — ${round}`;
 
-  const ownerLine = (t: TeamLine) =>
-    `*${t.name}* — ${t.owner ?? "_unowned_"} · ${pts(t.points)}`;
+  const ownerLine = (t: TeamLine) => `*${t.name}* — ${t.owner ?? "_unowned_"} · ${pts(t.points)}`;
 
-  const elements: SlackElement[] = [];
-  if (home.logo) elements.push({ type: "image", image_url: home.logo, alt_text: home.name });
-  elements.push({ type: "mrkdwn", text: ownerLine(home) });
-  if (away.logo) elements.push({ type: "image", image_url: away.logo, alt_text: away.name });
-  elements.push({ type: "mrkdwn", text: ownerLine(away) });
+  const elements: SlackElement[] = [
+    { type: "mrkdwn", text: ownerLine(home) },
+    { type: "mrkdwn", text: ownerLine(away) },
+  ];
   if (base) elements.push({ type: "mrkdwn", text: `<${base}|Leaderboard ↗>` });
+
+  const blocks: SlackBlock[] = [
+    { type: "header", text: { type: "plain_text", text: head, emoji: true } },
+  ];
+  if (imageUrl) {
+    blocks.push({ type: "image", image_url: imageUrl, alt_text: `${home.name} ${hg}-${ag} ${away.name}` });
+  } else {
+    blocks.push({ type: "section", text: { type: "mrkdwn", text: `*${home.name}*   ${hg} – ${ag}   *${away.name}*` } });
+  }
+  blocks.push({ type: "context", elements });
 
   return {
     text: `${statusLabel}: ${home.name} ${hg}-${ag} ${away.name}`,
-    blocks: [
-      { type: "header", text: { type: "plain_text", text: head, emoji: true } },
-      { type: "section", text: { type: "mrkdwn", text: `*${home.name}*   ${hg} – ${ag}   *${away.name}*` } },
-      { type: "context", elements },
-    ],
+    blocks,
   };
 }
 

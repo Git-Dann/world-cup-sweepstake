@@ -7,7 +7,6 @@ import {
   signOutAction,
   addPlayersAction,
   removePlayerAction,
-  togglePaidAction,
   updatePrizeAction,
   runDrawAction,
   resetDrawAction,
@@ -71,7 +70,6 @@ export default async function AdminPage({
     prisma.team.count({ where: { ownerId: { not: null } } }),
   ]);
   const drawDone = !!settings.drawCompletedAt;
-  const paidCount = players.filter((p) => p.paid).length;
 
   const card = "rounded-xl bg-[#141a30] p-5";
   const btn = "rounded-lg px-3 py-2 text-sm font-medium ring-1 ring-white/10 hover:bg-white/5";
@@ -99,13 +97,10 @@ export default async function AdminPage({
       <div className="flex flex-col gap-6">
         {/* Players */}
         <section className={card}>
-          <div className="mb-4 flex items-center justify-between">
+          <div className="mb-4">
             <h2 className="text-lg font-bold">
               Players <span className="text-slate-500">({players.length})</span>
             </h2>
-            <span className="text-xs text-slate-400">
-              {paidCount}/{players.length} paid
-            </span>
           </div>
 
           <form action={addPlayersAction} className="mb-4 flex flex-col gap-2">
@@ -130,15 +125,6 @@ export default async function AdminPage({
                   {drawDone && (
                     <span className="text-xs text-slate-500">{p._count.teams} teams</span>
                   )}
-                  <form action={togglePaidAction}>
-                    <input type="hidden" name="id" value={p.id} />
-                    <button
-                      className="rounded-md px-2 py-1 text-xs ring-1 ring-white/10"
-                      style={p.paid ? { background: "#1f6f43", color: "white" } : undefined}
-                    >
-                      {p.paid ? "Paid ✓" : "Mark paid"}
-                    </button>
-                  </form>
                   <form action={removePlayerAction}>
                     <input type="hidden" name="id" value={p.id} />
                     <button className="rounded-md px-2 py-1 text-xs text-red-400 ring-1 ring-white/10 hover:bg-red-500/10">
@@ -153,22 +139,13 @@ export default async function AdminPage({
 
         {/* Prize */}
         <section className={card}>
-          <h2 className="mb-4 text-lg font-bold">Prize &amp; stakes</h2>
+          <h2 className="mb-4 text-lg font-bold">Prize</h2>
           <form action={updatePrizeAction} className="flex flex-col gap-3">
             <label className="text-sm text-slate-400">
-              Prize
+              What does the winner get? <span className="text-slate-500">(just for fun — no buy-in)</span>
               <input
                 name="prizeText"
                 defaultValue={settings.prizeText}
-                className="mt-1 w-full rounded-lg bg-white/5 px-3 py-2 text-sm text-white outline-none ring-1 ring-white/10 focus:ring-2"
-              />
-            </label>
-            <label className="text-sm text-slate-400">
-              Pot / stakes note (optional)
-              <input
-                name="potText"
-                defaultValue={settings.potText ?? ""}
-                placeholder="e.g. £5 each — winner takes the pot"
                 className="mt-1 w-full rounded-lg bg-white/5 px-3 py-2 text-sm text-white outline-none ring-1 ring-white/10 focus:ring-2"
               />
             </label>
