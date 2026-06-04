@@ -12,9 +12,6 @@ import {
   updateBrandingAction,
   runDrawAction,
   resetDrawAction,
-  syncNowAction,
-  seedDemoAction,
-  clearAllAction,
 } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -183,24 +180,13 @@ export default async function AdminPage({
           </form>
         </section>
 
-        {/* Tournament data */}
-        <section className={card}>
-          <h2 className="mb-2 text-lg font-bold">Tournament data</h2>
-          <p className="mb-4 text-sm text-slate-400">
-            {teamCount} teams synced from API-Football.
-          </p>
-          <form action={syncNowAction}>
-            <button className={btn}>Sync now (teams, groups, fixtures)</button>
-          </form>
-        </section>
-
         {/* The draw */}
         <section className={card}>
           <h2 className="mb-2 text-lg font-bold">The draw</h2>
           <p className="mb-4 text-sm text-slate-400">
             {drawDone
               ? `✅ Draw done — ${ownedCount}/${teamCount} teams assigned.`
-              : "Not drawn yet. Add all players and sync teams first, then run the draw to randomly split the 48 teams."}
+              : `Ready — ${teamCount} teams and ${players.length} players loaded. Run the draw to randomly split the teams across players. It posts the reveal to Slack and is re-runnable before kick-off.`}
           </p>
           <div className="flex flex-wrap gap-2">
             <form action={runDrawAction}>
@@ -225,24 +211,6 @@ export default async function AdminPage({
           )}
         </section>
 
-        {/* Demo & reset */}
-        <section className={card}>
-          <h2 className="mb-2 text-lg font-bold">Demo &amp; reset</h2>
-          <p className="mb-4 text-sm text-slate-400">
-            Load sample teams, players, a draw and results to preview the presentation.
-            Clear everything before going live with real data.
-          </p>
-          <div className="flex flex-wrap gap-2">
-            <form action={seedDemoAction}>
-              <button className={primaryBtn} style={{ background: GOLD }}>
-                Load demo data
-              </button>
-            </form>
-            <form action={clearAllAction}>
-              <button className={`${btn} text-red-400`}>Clear all data</button>
-            </form>
-          </div>
-        </section>
       </div>
     </div>
   );
