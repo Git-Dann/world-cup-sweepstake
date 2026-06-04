@@ -47,6 +47,7 @@ async function handle(req: NextRequest) {
     await postToSlack(
       fixturesPreviewMessage({
         dateLabel: londonDateLabel(new Date()),
+        base,
         matches: todays.map((f) => {
           const owners = [f.homeTeam?.owner?.name, f.awayTeam?.owner?.name].filter(Boolean);
           return {

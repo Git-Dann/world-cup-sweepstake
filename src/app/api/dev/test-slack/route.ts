@@ -82,6 +82,7 @@ async function handle(req: NextRequest) {
   const preview = await postToSlack(
     fixturesPreviewMessage({
       dateLabel: "Sample fixtures · TEST",
+      base,
       matches: next.map((f) => ({
         time: londonTime(f.kickoff),
         home: f.homeTeam?.name ?? "TBD",

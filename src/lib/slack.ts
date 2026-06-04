@@ -36,6 +36,15 @@ export type TeamLine = {
 
 const pts = (n: number) => `${n} pt${n === 1 ? "" : "s"}`;
 
+// Standard footer link — included on EVERY Slack message.
+function linkBlock(base: string): SlackBlock | null {
+  if (!base) return null;
+  return {
+    type: "context",
+    elements: [{ type: "mrkdwn", text: `<${base}|See the live leaderboard ↗>` }],
+  };
+}
+
 // A single match result / live update. `imageUrl` is the rendered scoreboard graphic.
 export function resultMessage(args: {
   finished: boolean;
@@ -57,8 +66,6 @@ export function resultMessage(args: {
     { type: "mrkdwn", text: ownerLine(home) },
     { type: "mrkdwn", text: ownerLine(away) },
   ];
-  if (base) elements.push({ type: "mrkdwn", text: `<${base}|Leaderboard ↗>` });
-
   const blocks: SlackBlock[] = [
     { type: "header", text: { type: "plain_text", text: head, emoji: true } },
   ];
@@ -68,6 +75,8 @@ export function resultMessage(args: {
     blocks.push({ type: "section", text: { type: "mrkdwn", text: `*${home.name}*   ${hg} – ${ag}   *${away.name}*` } });
   }
   blocks.push({ type: "context", elements });
+  const footer = linkBlock(base);
+  if (footer) blocks.push(footer);
 
   return {
     text: `${statusLabel}: ${home.name} ${hg}-${ag} ${away.name}`,
@@ -93,11 +102,8 @@ export function leaderboardMessage(args: {
   ];
   if (args.imageUrl) blocks.push({ type: "image", image_url: args.imageUrl, alt_text: "Leaderboard" });
   blocks.push({ type: "section", text: { type: "mrkdwn", text: lines } });
-  if (args.base)
-    blocks.push({
-      type: "context",
-      elements: [{ type: "mrkdwn", text: `<${args.base}|View the live leaderboard ↗>` }],
-    });
+  const footer = linkBlock(args.base);
+  if (footer) blocks.push(footer);
 
   return { text: title, blocks };
 }
@@ -105,6 +111,7 @@ export function leaderboardMessage(args: {
 // Morning preview of the day's fixtures.
 export function fixturesPreviewMessage(args: {
   dateLabel: string;
+  base: string;
   matches: { time: string; home: string; away: string; owners?: string }[];
 }) {
   const lines = args.matches
@@ -113,16 +120,16 @@ export function fixturesPreviewMessage(args: {
         `\`${m.time}\`  *${m.home}* v *${m.away}*${m.owners ? `  —  ${m.owners}` : ""}`,
     )
     .join("\n");
-  return {
-    text: `Today's matches — ${args.dateLabel}`,
-    blocks: [
-      {
-        type: "header",
-        text: { type: "plain_text", text: `📅 Today's matches — ${args.dateLabel}`, emoji: true },
-      },
-      { type: "section", text: { type: "mrkdwn", text: lines || "_No matches today._" } },
-    ],
-  };
+  const blocks: SlackBlock[] = [
+    {
+      type: "header",
+      text: { type: "plain_text", text: `📅 Today's matches — ${args.dateLabel}`, emoji: true },
+    },
+    { type: "section", text: { type: "mrkdwn", text: lines || "_No matches today._" } },
+  ];
+  const footer = linkBlock(args.base);
+  if (footer) blocks.push(footer);
+  return { text: `Today's matches — ${args.dateLabel}`, blocks };
 }
 
 // The draw reveal — who got which teams, with flag emojis.
