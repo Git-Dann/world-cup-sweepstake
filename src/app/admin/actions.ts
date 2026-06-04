@@ -89,8 +89,14 @@ async function announceDraw() {
 export async function runDrawAction() {
   await assertAdmin();
   await runDraw();
-  await announceDraw();
   refresh();
+}
+
+export async function postDrawAction() {
+  await assertAdmin();
+  await announceDraw();
+  revalidatePath("/");
+  redirect("/admin?saved=draw-posted");
 }
 
 export async function resetDrawAction() {

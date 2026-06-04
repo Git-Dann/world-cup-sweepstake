@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { ensureSettings } from "@/lib/settings";
 import { ImageUpload } from "@/components/image-upload";
 import { RemovePlayerButton } from "@/components/remove-player-button";
+import { ConfirmButton } from "@/components/confirm-button";
 import {
   signInAction,
   signOutAction,
@@ -13,6 +14,7 @@ import {
   updateBrandingAction,
   runDrawAction,
   resetDrawAction,
+  postDrawAction,
 } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -183,10 +185,10 @@ export default async function AdminPage({
           <h2 className="mb-2 text-lg font-bold">The draw</h2>
           <p className="mb-4 text-sm text-slate-400">
             {drawDone
-              ? `✅ Draw done — ${ownedCount}/${teamCount} teams assigned.`
-              : `Ready — ${teamCount} teams and ${players.length} players loaded. Run the draw to randomly split the teams across players. It posts the reveal to Slack and is re-runnable before kick-off.`}
+              ? `✅ Draw done — ${ownedCount}/${teamCount} teams assigned. Review it on the leaderboard, then post it to #world-cup when you're happy.`
+              : `Ready — ${teamCount} teams and ${players.length} players loaded. Run the draw to assign teams — this does NOT post to Slack, so you can review (and re-run) first.`}
           </p>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <form action={runDrawAction}>
               <button
                 className={primaryBtn}
@@ -197,14 +199,30 @@ export default async function AdminPage({
               </button>
             </form>
             {drawDone && (
-              <form action={resetDrawAction}>
-                <button className={`${btn} text-red-400`}>Reset draw</button>
-              </form>
+              <>
+                <Link href="/" className={btn}>
+                  Review on leaderboard ↗
+                </Link>
+                <ConfirmButton
+                  action={postDrawAction}
+                  confirmText="Post the draw to #world-cup? Everyone in the channel will see it."
+                  className={primaryBtn}
+                  style={{ background: "#2f7bff", color: "white" }}
+                >
+                  📣 Post draw to Slack
+                </ConfirmButton>
+                <form action={resetDrawAction}>
+                  <button className={`${btn} text-red-400`}>Reset draw</button>
+                </form>
+              </>
             )}
           </div>
+          {sp?.saved === "draw-posted" && (
+            <p className="mt-3 text-sm font-medium text-green-400">✓ Draw posted to #world-cup</p>
+          )}
           {drawDone && (
             <p className="mt-3 text-xs text-amber-400/80">
-              ⚠️ Re-running reshuffles everyone&apos;s teams. Only do this before kick-off.
+              ⚠️ Re-running reshuffles everyone&apos;s teams — post again afterwards to update the channel.
             </p>
           )}
         </section>
