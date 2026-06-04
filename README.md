@@ -1,8 +1,8 @@
 # World Cup 2026 — Office Sweepstake ⚽🏆
 
 A tiny, self-contained app that runs an office World Cup sweepstake: it randomly
-draws all 48 teams across the players, tracks results live from
-[API-Football](https://www.api-football.com/), keeps a points-based leaderboard,
+draws all 48 teams across the players, tracks results from
+[football-data.org](https://www.football-data.org/), keeps a points-based leaderboard,
 and posts updates to Slack.
 
 - **Public page** (`/`) — live leaderboard + group standings, no login.
@@ -15,11 +15,11 @@ and posts updates to Slack.
 ```
 GitHub Action (every 15 min) ─▶ /api/cron/poll-results ─┐
 Vercel Cron   (daily 08:00)  ─▶ /api/cron/daily-sync    ─┤
-                                                          ├▶ API-Football ─▶ Neon DB ─▶ leaderboard + Slack
+                                                          ├▶ football-data.org ─▶ Neon DB ─▶ leaderboard + Slack
 ```
 
-- The **poller** only calls API-Football when a match is in its live window, so we
-  stay inside the **free plan's 100 requests/day** (≈3 + ≈36 on a busy match day).
+- The **poller** only calls football-data.org when a match is in its live window.
+  The free tier allows **10 requests/min with no daily cap** — we use a tiny fraction.
 - The **daily sync** (Vercel Cron — the only schedule Hobby allows) does a full
   refresh of teams/groups/fixtures and posts the morning preview + standings.
 - Scoring: group win **+3**, draw **+1**; reaching R32 **+3**, R16 **+5**, QF **+8**,
@@ -33,7 +33,7 @@ Next.js 15 (App Router) · React 19 · TypeScript · Tailwind v4 · Prisma 6 · 
 
 | Var | What |
 |---|---|
-| `API_FOOTBALL_KEY` | API-Football key ([dashboard.api-football.com](https://dashboard.api-football.com)) |
+| `FOOTBALL_DATA_TOKEN` | football-data.org token ([register](https://www.football-data.org/client/register)) |
 | `SLACK_WEBHOOK_URL` | Incoming webhook for the `#world-cup` channel |
 | `CRON_SECRET` | Random secret guarding the cron endpoints |
 | `ADMIN_PASSWORD` | Password for `/admin` |

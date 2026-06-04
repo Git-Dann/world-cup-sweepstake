@@ -21,7 +21,7 @@ async function handle(req: NextRequest) {
   }
 
   const settings = await ensureSettings();
-  const synced = await syncAll(settings.leagueId, settings.season);
+  const synced = await syncAll();
   await recomputeAllScores(await getScoring());
 
   const base = process.env.NEXT_PUBLIC_APP_URL ?? "";

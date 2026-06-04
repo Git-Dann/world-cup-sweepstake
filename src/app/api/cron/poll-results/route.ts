@@ -17,8 +17,7 @@ async function handle(req: NextRequest) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  const settings = await ensureSettings();
-  const { leagueId, season } = settings;
+  await ensureSettings();
   const force = new URL(req.url).searchParams.get("force") === "1";
 
   const fixtures = await prisma.fixture.findMany({
@@ -44,11 +43,9 @@ async function handle(req: NextRequest) {
     return NextResponse.json({ skipped: true, reason: "no live window", apiCalls: 0 });
   }
 
-  // Sync only the date(s) that have in-window matches — minimal API usage.
-  const dates = force
-    ? [new Date().toISOString().slice(0, 10)]
-    : [...new Set(windowFixtures.map((f) => f.kickoff.toISOString().slice(0, 10)))];
-  for (const d of dates) await syncFixtures(leagueId, season, { date: d });
+  // One call returns the whole tournament; the window gate above means we only
+  // hit the API when a match is actually live or recently finished.
+  await syncFixtures();
 
   await recomputeAllScores(await getScoring());
 
@@ -97,7 +94,7 @@ async function handle(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({ ok: true, polledDates: dates, finishedPosted: posted });
+  return NextResponse.json({ ok: true, synced: true, finishedPosted: posted });
 }
 
 export const GET = handle;

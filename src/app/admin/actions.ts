@@ -81,8 +81,8 @@ export async function resetDrawAction() {
 
 export async function syncNowAction() {
   await assertAdmin();
-  const s = await ensureSettings();
-  await syncAll(s.leagueId, s.season);
+  await ensureSettings();
+  await syncAll();
   await recomputeAllScores(await getScoring());
   refresh();
 }

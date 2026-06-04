@@ -36,11 +36,11 @@ export type RoundKey = "GROUP" | "R32" | "R16" | "QF" | "SF" | "FINAL";
 export function roundKeyFromApi(round: string): RoundKey {
   const r = round.toLowerCase();
   if (r.includes("group")) return "GROUP";
-  if (r.includes("round of 32") || r.includes("1/16")) return "R32";
-  if (r.includes("round of 16") || r.includes("1/8")) return "R16";
+  if (r.includes("round of 32") || r.includes("last_32") || r.includes("1/16")) return "R32";
+  if (r.includes("round of 16") || r.includes("last_16") || r.includes("1/8")) return "R16";
   if (r.includes("quarter")) return "QF";
   // 3rd-place playoff teams are semi-finalists, not finalists.
-  if (r.includes("3rd place") || r.includes("third place")) return "SF";
+  if (r.includes("third") || r.includes("3rd")) return "SF";
   if (r.includes("semi")) return "SF";
   if (r.includes("final")) return "FINAL";
   return "GROUP";
