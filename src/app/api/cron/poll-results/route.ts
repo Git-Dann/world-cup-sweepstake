@@ -80,6 +80,8 @@ async function handle(req: NextRequest) {
       round: f.round,
       ho: f.homeTeam.owner?.name ?? "",
       ao: f.awayTeam.owner?.name ?? "",
+      hf: f.homeTeam.flagUrl ?? "",
+      af: f.awayTeam.flagUrl ?? "",
     });
     const ok = await postToSlack(
       resultMessage({
