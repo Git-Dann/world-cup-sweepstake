@@ -2,6 +2,7 @@ import Link from "next/link";
 import { isAdmin } from "@/lib/admin-auth";
 import { prisma } from "@/lib/prisma";
 import { ensureSettings } from "@/lib/settings";
+import { ImageUpload } from "@/components/image-upload";
 import {
   signInAction,
   signOutAction,
@@ -158,29 +159,24 @@ export default async function AdminPage({
 
         {/* Branding */}
         <section className={card}>
-          <h2 className="mb-2 text-lg font-bold">Branding</h2>
-          <p className="mb-4 text-sm text-slate-400">
-            Optional. Paste an image URL, or drop a file in <code className="text-slate-300">/public</code> and use a path like <code className="text-slate-300">/logo.png</code>.
-          </p>
-          <form action={updateBrandingAction} className="flex flex-col gap-3">
-            <label className="text-sm text-slate-400">
-              Header logo <span className="text-slate-500">(above &ldquo;2026&rdquo; — blank = 🏆)</span>
-              <input
-                name="logoUrl"
-                defaultValue={settings.logoUrl ?? ""}
-                placeholder="https://…/logo.png"
-                className="mt-1 w-full rounded-lg bg-white/5 px-3 py-2 text-sm text-white outline-none ring-1 ring-white/10 focus:ring-2"
-              />
-            </label>
-            <label className="text-sm text-slate-400">
-              Background image <span className="text-slate-500">(blank = plain navy)</span>
-              <input
-                name="bgUrl"
-                defaultValue={settings.bgUrl ?? ""}
-                placeholder="https://…/background.jpg"
-                className="mt-1 w-full rounded-lg bg-white/5 px-3 py-2 text-sm text-white outline-none ring-1 ring-white/10 focus:ring-2"
-              />
-            </label>
+          <h2 className="mb-4 text-lg font-bold">Branding</h2>
+          <form action={updateBrandingAction} className="flex flex-col gap-4">
+            <ImageUpload
+              name="logoUrl"
+              label="Header logo (above “2026”)"
+              spec="Square PNG or SVG, transparent background, ~512×512px. Uploads are auto-resized (keep under ~1 MB). Blank = 🏆."
+              current={settings.logoUrl}
+              maxDim={512}
+              format="image/png"
+            />
+            <ImageUpload
+              name="bgUrl"
+              label="Background image"
+              spec="Landscape JPG or PNG, ~1920×1080px (16:9). Uploads are auto-resized & compressed. Blank = plain navy."
+              current={settings.bgUrl}
+              maxDim={1600}
+              format="image/jpeg"
+            />
             <button type="submit" className={`${primaryBtn} self-start`} style={{ background: GOLD }}>
               Save branding
             </button>

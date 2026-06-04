@@ -119,9 +119,10 @@ function MatchBanner({ m }: { m: FeaturedMatch }) {
   }
   const live = m.state === "live";
   const ko = new Date(m.kickoff);
+  const ring = (c: string) => ({ boxShadow: `0 0 0 3px ${c}, 0 0 20px ${c}55` });
   return (
-    <div className="overflow-hidden rounded-2xl ring-1 ring-white/10">
-      <div className="flex items-center justify-center gap-2 bg-[#141a30] py-2 text-xs font-bold uppercase tracking-wider">
+    <div className="overflow-hidden rounded-2xl ring-1 ring-white/10" style={{ background: "linear-gradient(180deg,#172041,#0e1530)" }}>
+      <div className="flex items-center justify-center gap-2 py-2.5 text-xs font-bold uppercase tracking-[0.2em]">
         {live ? (
           <>
             <span className="h-2 w-2 animate-pulse rounded-full bg-red-500" />
@@ -133,34 +134,34 @@ function MatchBanner({ m }: { m: FeaturedMatch }) {
         <span className="text-slate-600">·</span>
         <span className="text-slate-400">{m.round}</span>
       </div>
-      <div className="grid grid-cols-[1fr_auto_1fr] items-center">
-        <div
-          className="flex items-center justify-end gap-2 p-4 sm:gap-3 sm:p-5"
-          style={{ background: "linear-gradient(90deg, rgba(255,77,77,.22), rgba(255,77,77,0))" }}
-        >
-          <span className="truncate text-right text-sm font-bold sm:text-xl">{m.home.name}</span>
-          <Flag src={m.home.logo} alt={m.home.name} size={38} />
+      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 px-4 pb-6 pt-2 sm:gap-6 sm:px-8">
+        <div className="flex items-center justify-end gap-2.5 sm:gap-4">
+          <span className="truncate text-right text-sm font-extrabold sm:text-2xl">{m.home.name}</span>
+          <span className="shrink-0 rounded-full" style={ring("#ff4d4d")}>
+            <Flag src={m.home.logo} alt={m.home.name} size={50} />
+          </span>
         </div>
-        <div className="px-3 text-center sm:px-5" style={{ background: "#0b1020" }}>
+        <div className="text-center">
           {live ? (
-            <div className="text-3xl font-black tabular-nums sm:text-5xl" style={{ color: GOLD }}>
-              {m.homeGoals ?? 0}<span className="px-1.5 text-slate-600">–</span>{m.awayGoals ?? 0}
+            <div className="text-4xl font-black tabular-nums sm:text-5xl" style={{ color: GOLD }}>
+              {m.homeGoals ?? 0}<span className="px-1 text-slate-600">–</span>{m.awayGoals ?? 0}
             </div>
           ) : (
-            <div className="text-base font-black text-slate-400 sm:text-lg">VS</div>
+            <span className="inline-flex items-center rounded-full px-3 py-1 text-sm font-black" style={{ color: GOLD, boxShadow: `inset 0 0 0 1.5px ${GOLD}` }}>
+              VS
+            </span>
           )}
         </div>
-        <div
-          className="flex items-center gap-2 p-4 sm:gap-3 sm:p-5"
-          style={{ background: "linear-gradient(270deg, rgba(47,123,255,.24), rgba(47,123,255,0))" }}
-        >
-          <Flag src={m.away.logo} alt={m.away.name} size={38} />
-          <span className="truncate text-sm font-bold sm:text-xl">{m.away.name}</span>
+        <div className="flex items-center justify-start gap-2.5 sm:gap-4">
+          <span className="shrink-0 rounded-full" style={ring("#2f7bff")}>
+            <Flag src={m.away.logo} alt={m.away.name} size={50} />
+          </span>
+          <span className="truncate text-sm font-extrabold sm:text-2xl">{m.away.name}</span>
         </div>
       </div>
       {!live && (
-        <div className="bg-[#141a30] py-2 text-center text-xs text-slate-400">
-          {londonDateLabel(ko)} · {londonTime(ko)}
+        <div className="border-t border-white/5 py-2.5 text-center text-xs text-slate-400">
+          🗓️ {londonDateLabel(ko)} · {londonTime(ko)}
         </div>
       )}
     </div>
