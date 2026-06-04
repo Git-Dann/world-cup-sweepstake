@@ -3,6 +3,7 @@ import { isAdmin } from "@/lib/admin-auth";
 import { prisma } from "@/lib/prisma";
 import { ensureSettings } from "@/lib/settings";
 import { ImageUpload } from "@/components/image-upload";
+import { RemovePlayerButton } from "@/components/remove-player-button";
 import {
   signInAction,
   signOutAction,
@@ -117,19 +118,12 @@ export default async function AdminPage({
           {players.length === 0 ? (
             <p className="text-sm text-slate-500">No players yet.</p>
           ) : (
-            <ul className="flex flex-col divide-y divide-white/5">
+            <ul className="grid grid-cols-1 gap-x-8 sm:grid-cols-2">
               {players.map((p) => (
-                <li key={p.id} className="flex items-center gap-3 py-2">
+                <li key={p.id} className="flex items-center gap-3 border-b border-white/5 py-2.5">
                   <span className="flex-1 truncate">{p.name}</span>
-                  {drawDone && (
-                    <span className="text-xs text-slate-500">{p._count.teams} teams</span>
-                  )}
-                  <form action={removePlayerAction}>
-                    <input type="hidden" name="id" value={p.id} />
-                    <button className="rounded-md px-2 py-1 text-xs text-red-400 ring-1 ring-white/10 hover:bg-red-500/10">
-                      Remove
-                    </button>
-                  </form>
+                  {drawDone && <span className="text-xs text-slate-500">{p._count.teams} teams</span>}
+                  <RemovePlayerButton id={p.id} name={p.name} action={removePlayerAction} />
                 </li>
               ))}
             </ul>
