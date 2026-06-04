@@ -1,0 +1,88 @@
+// World Cup 2026 Office Sweepstake — data model
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
+}
+
+// A person in the office playing the sweepstake
+model Player {
+  id        String   @id @default(cuid())
+  name      String
+  paid      Boolean  @default(false)
+  teams     Team[]
+  createdAt DateTime @default(now())
+}
+
+// A national team in the tournament (48 of them)
+model Team {
+  id           String       @id @default(cuid())
+  apiId        Int          @unique // API-Football team id
+  name         String
+  code         String? // 3-letter code, e.g. ENG
+  groupName    String? // A..L
+  logoUrl      String? // API-Football badge URL
+  flagUrl      String? // country flag URL
+  localBadge   String? // self-hosted badge path, e.g. /teams/ENG.png
+  ownerId      String?
+  owner        Player?      @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  points       Int          @default(0) // denormalised total for fast leaderboards
+  reachedRound String       @default("GROUP") // furthest round reached
+  eliminated   Boolean      @default(false)
+  exitRound    String?
+  homeFixtures Fixture[]    @relation("HomeTeam")
+  awayFixtures Fixture[]    @relation("AwayTeam")
+  scoreEvents  ScoreEvent[]
+  createdAt    DateTime     @default(now())
+}
+
+// A match
+model Fixture {
+  id              String   @id @default(cuid())
+  apiId           Int      @unique // API-Football fixture id
+  kickoff         DateTime
+  status          String   @default("NS") // NS, 1H, HT, 2H, ET, P, FT, AET, PEN, PST, CANC...
+  round           String   @default("Group Stage") // API-Football league.round string
+  homeTeamId      String?
+  homeTeam        Team?    @relation("HomeTeam", fields: [homeTeamId], references: [id])
+  awayTeamId      String?
+  awayTeam        Team?    @relation("AwayTeam", fields: [awayTeamId], references: [id])
+  homeGoals       Int?
+  awayGoals       Int?
+  winnerTeamApiId Int? // API-Football id of the winner (knockouts)
+  finished        Boolean  @default(false)
+  pointsProcessed Boolean  @default(false) // group W/D/L points awarded
+  resultPosted    Boolean  @default(false) // result posted to Slack
+  updatedAt       DateTime @updatedAt
+  createdAt       DateTime @default(now())
+}
+
+// Ledger of points awarded — powers the live leaderboard, audit, and "today's movers"
+model ScoreEvent {
+  id        String   @id @default(cuid())
+  teamId    String
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  fixtureId String?
+  kind      String // GROUP_WIN, GROUP_DRAW, REACH_R32, REACH_R16, REACH_QF, REACH_SF, REACH_FINAL, WIN_CUP, GOAL
+  points    Int
+  note      String?
+  createdAt DateTime @default(now())
+
+  @@index([teamId])
+}
+
+// Singleton config row (id = 1) — editable in the admin
+model Setting {
+  id              Int       @id @default(1)
+  prizeText       String    @default("Bragging rights 🏆")
+  potText         String?
+  scoring         Json? // editable scoring config; defaults applied in code
+  drawCompletedAt DateTime?
+  leagueId        Int       @default(1) // API-Football: World Cup = 1
+  season          Int       @default(2026)
+  updatedAt       DateTime  @updatedAt
+}

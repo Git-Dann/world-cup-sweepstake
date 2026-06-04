@@ -1,0 +1,104 @@
+import { NextResponse, type NextRequest } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { checkCronSecret } from "@/lib/cron-auth";
+import { ensureSettings, getScoring } from "@/lib/settings";
+import { syncFixtures } from "@/lib/tournament-sync";
+import { recomputeAllScores } from "@/lib/score-engine";
+import { resultMessage, postToSlack } from "@/lib/slack";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const maxDuration = 60;
+
+// Called every ~15 min by GitHub Actions. Only hits API-Football when a match
+// is actually in its live window — otherwise it returns immediately (0 API calls).
+async function handle(req: NextRequest) {
+  if (!checkCronSecret(req)) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+
+  const settings = await ensureSettings();
+  const { leagueId, season } = settings;
+  const force = new URL(req.url).searchParams.get("force") === "1";
+
+  const fixtures = await prisma.fixture.findMany({
+    select: { kickoff: true, finished: true },
+  });
+  if (fixtures.length === 0) {
+    return NextResponse.json({
+      skipped: true,
+      reason: "no fixtures synced yet — run daily-sync first",
+    });
+  }
+
+  const now = Date.now();
+  const BEFORE = 20 * 60 * 1000; // start 20 min before kick-off
+  const AFTER = 200 * 60 * 1000; // keep polling ~3h20 after (covers ET + delays)
+  const inWindow = (k: Date) => {
+    const t = k.getTime();
+    return t - BEFORE <= now && now <= t + AFTER;
+  };
+
+  const windowFixtures = fixtures.filter((f) => !f.finished && inWindow(f.kickoff));
+  if (!force && windowFixtures.length === 0) {
+    return NextResponse.json({ skipped: true, reason: "no live window", apiCalls: 0 });
+  }
+
+  // Sync only the date(s) that have in-window matches — minimal API usage.
+  const dates = force
+    ? [new Date().toISOString().slice(0, 10)]
+    : [...new Set(windowFixtures.map((f) => f.kickoff.toISOString().slice(0, 10)))];
+  for (const d of dates) await syncFixtures(leagueId, season, { date: d });
+
+  await recomputeAllScores(await getScoring());
+
+  // Post any newly-finished results.
+  const base = process.env.NEXT_PUBLIC_APP_URL ?? "";
+  const toPost = await prisma.fixture.findMany({
+    where: { finished: true, resultPosted: false },
+    include: {
+      homeTeam: { include: { owner: true } },
+      awayTeam: { include: { owner: true } },
+    },
+    orderBy: { kickoff: "asc" },
+  });
+
+  let posted = 0;
+  for (const f of toPost) {
+    if (!f.homeTeam || !f.awayTeam) {
+      await prisma.fixture.update({ where: { id: f.id }, data: { resultPosted: true } });
+      continue;
+    }
+    const ok = await postToSlack(
+      resultMessage({
+        finished: true,
+        statusLabel: "FULL TIME",
+        round: f.round,
+        base,
+        home: {
+          name: f.homeTeam.name,
+          logo: f.homeTeam.logoUrl,
+          goals: f.homeGoals,
+          owner: f.homeTeam.owner?.name ?? null,
+          points: f.homeTeam.points,
+        },
+        away: {
+          name: f.awayTeam.name,
+          logo: f.awayTeam.logoUrl,
+          goals: f.awayGoals,
+          owner: f.awayTeam.owner?.name ?? null,
+          points: f.awayTeam.points,
+        },
+      }),
+    );
+    if (ok) {
+      await prisma.fixture.update({ where: { id: f.id }, data: { resultPosted: true } });
+      posted++;
+    }
+  }
+
+  return NextResponse.json({ ok: true, polledDates: dates, finishedPosted: posted });
+}
+
+export const GET = handle;
+export const POST = handle;

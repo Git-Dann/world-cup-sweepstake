@@ -1,0 +1,23 @@
+name: Poll match results
+
+# Drives near-live updates. Vercel Hobby caps crons at once/day, so the 15-min
+# polling runs here instead (free). The endpoint only calls API-Football when a
+# match is actually in its live window, so this stays well under the free quota.
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch: {}
+
+jobs:
+  poll:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping the poller
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          curl -fsS -X POST "$APP_URL/api/cron/poll-results" \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            && echo "" && echo "poll ok" \
+            || echo "poll failed (non-fatal — self-heals on the next run)"
