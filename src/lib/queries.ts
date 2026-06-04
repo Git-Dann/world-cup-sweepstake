@@ -57,8 +57,8 @@ export type FeaturedMatch =
       round: string;
       status: string;
       kickoff: string;
-      home: { name: string; logo: string | null };
-      away: { name: string; logo: string | null };
+      home: { name: string; logo: string | null; flag: string | null };
+      away: { name: string; logo: string | null; flag: string | null };
       homeGoals: number | null;
       awayGoals: number | null;
     }
@@ -94,8 +94,8 @@ export async function getFeaturedMatch(): Promise<FeaturedMatch> {
     round: fixture.round,
     status: fixture.status,
     kickoff: fixture.kickoff.toISOString(),
-    home: { name: fixture.homeTeam.name, logo: fixture.homeTeam.logoUrl },
-    away: { name: fixture.awayTeam.name, logo: fixture.awayTeam.logoUrl },
+    home: { name: fixture.homeTeam.name, logo: fixture.homeTeam.logoUrl, flag: fixture.homeTeam.flagUrl },
+    away: { name: fixture.awayTeam.name, logo: fixture.awayTeam.logoUrl, flag: fixture.awayTeam.flagUrl },
     homeGoals: fixture.homeGoals,
     awayGoals: fixture.awayGoals,
   };

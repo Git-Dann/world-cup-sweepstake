@@ -7,6 +7,7 @@ import {
   stageToRoundLabel,
 } from "@/lib/football-data";
 import { ensureSettings } from "@/lib/settings";
+import { flagUrlForTeam } from "@/lib/flags";
 
 // Upsert the teams (name, code, crest) and assign group letters from standings.
 export async function syncTeamsAndGroups() {
@@ -14,8 +15,8 @@ export async function syncTeamsAndGroups() {
   for (const t of teams) {
     await prisma.team.upsert({
       where: { apiId: t.id },
-      update: { name: t.name, code: t.tla, logoUrl: t.crest },
-      create: { apiId: t.id, name: t.name, code: t.tla, logoUrl: t.crest },
+      update: { name: t.name, code: t.tla, logoUrl: t.crest, flagUrl: flagUrlForTeam(t.name) },
+      create: { apiId: t.id, name: t.name, code: t.tla, logoUrl: t.crest, flagUrl: flagUrlForTeam(t.name) },
     });
   }
 

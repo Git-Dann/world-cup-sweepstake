@@ -40,7 +40,7 @@ function TeamChips({ teams }: { teams: LeaderboardRow["teams"] }) {
     <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
       {teams.map((t) => (
         <span key={t.id} className="inline-flex items-center gap-1" title={`${t.name} · ${t.points} pts`}>
-          <Flag src={t.logoUrl} alt={t.name} size={15} dim={t.eliminated} />
+          <Flag src={t.flagUrl ?? t.logoUrl} alt={t.name} size={15} dim={t.eliminated} />
           <span className={`text-[11px] ${t.eliminated ? "text-slate-600 line-through" : "text-slate-400"}`}>{t.code ?? t.name}</span>
           <span className="text-[11px] font-semibold tabular-nums" style={{ color: GOLD }}>{t.points}</span>
         </span>
@@ -70,7 +70,7 @@ function Podium({ top }: { top: LeaderboardRow[] }) {
           <div className="text-[9px] uppercase tracking-wider text-slate-400">pts · {r.teamsAlive} alive</div>
           <div className="mt-2 flex flex-wrap justify-center gap-1">
             {r.teams.map((t) => (
-              <Flag key={t.id} src={t.logoUrl} alt={t.name} size={18} dim={t.eliminated} />
+              <Flag key={t.id} src={t.flagUrl ?? t.logoUrl} alt={t.name} size={18} dim={t.eliminated} />
             ))}
           </div>
         </div>
@@ -138,7 +138,7 @@ function MatchBanner({ m }: { m: FeaturedMatch }) {
         <div className="flex items-center justify-end gap-2.5 sm:gap-4">
           <span className="truncate text-right text-sm font-extrabold sm:text-2xl">{m.home.name}</span>
           <span className="shrink-0 rounded-full" style={ring("#ff4d4d")}>
-            <Flag src={m.home.logo} alt={m.home.name} size={50} />
+            <Flag src={m.home.flag ?? m.home.logo} alt={m.home.name} size={50} />
           </span>
         </div>
         <div className="text-center">
@@ -154,7 +154,7 @@ function MatchBanner({ m }: { m: FeaturedMatch }) {
         </div>
         <div className="flex items-center justify-start gap-2.5 sm:gap-4">
           <span className="shrink-0 rounded-full" style={ring("#2f7bff")}>
-            <Flag src={m.away.logo} alt={m.away.name} size={50} />
+            <Flag src={m.away.flag ?? m.away.logo} alt={m.away.name} size={50} />
           </span>
           <span className="truncate text-sm font-extrabold sm:text-2xl">{m.away.name}</span>
         </div>

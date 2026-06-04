@@ -6,6 +6,7 @@ export type LeaderboardTeam = {
   code: string | null;
   groupName: string | null;
   logoUrl: string | null;
+  flagUrl: string | null;
   points: number;
   reachedRound: string;
   eliminated: boolean;
@@ -39,6 +40,7 @@ export async function getLeaderboard(): Promise<LeaderboardRow[]> {
       code: t.code,
       groupName: t.groupName,
       logoUrl: t.logoUrl,
+      flagUrl: t.flagUrl,
       points: t.points,
       reachedRound: t.reachedRound,
       eliminated: t.eliminated,
