@@ -59,7 +59,8 @@ export async function updatePrizeAction(formData: FormData) {
   const prizeText = String(formData.get("prizeText") ?? "").trim() || "Bragging rights 🏆";
   await ensureSettings();
   await prisma.setting.update({ where: { id: 1 }, data: { prizeText } });
-  refresh();
+  revalidatePath("/");
+  redirect("/admin?saved=prize");
 }
 
 export async function updateBrandingAction(formData: FormData) {
@@ -68,7 +69,8 @@ export async function updateBrandingAction(formData: FormData) {
   const bgUrl = String(formData.get("bgUrl") ?? "").trim() || null;
   await ensureSettings();
   await prisma.setting.update({ where: { id: 1 }, data: { logoUrl, bgUrl } });
-  refresh();
+  revalidatePath("/");
+  redirect("/admin?saved=branding");
 }
 
 async function announceDraw() {

@@ -52,7 +52,7 @@ function LoginScreen({ error }: { error?: boolean }) {
 export default async function AdminPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; saved?: string }>;
 }) {
   const sp = await searchParams;
 
@@ -132,7 +132,9 @@ export default async function AdminPage({
 
         {/* Prize */}
         <section className={card}>
-          <h2 className="mb-4 text-lg font-bold">Prize</h2>
+          <h2 className="mb-4 text-lg font-bold">
+            Prize{sp?.saved === "prize" && <span className="ml-2 text-xs font-medium text-green-400">✓ Saved</span>}
+          </h2>
           <form action={updatePrizeAction} className="flex flex-col gap-3">
             <label className="text-sm text-slate-400">
               What does the winner get? <span className="text-slate-500">(just for fun — no buy-in)</span>
@@ -150,7 +152,9 @@ export default async function AdminPage({
 
         {/* Branding */}
         <section className={card}>
-          <h2 className="mb-4 text-lg font-bold">Branding</h2>
+          <h2 className="mb-4 text-lg font-bold">
+            Branding{sp?.saved === "branding" && <span className="ml-2 text-xs font-medium text-green-400">✓ Saved</span>}
+          </h2>
           <form action={updateBrandingAction} className="flex flex-col gap-4">
             <ImageUpload
               name="logoUrl"
