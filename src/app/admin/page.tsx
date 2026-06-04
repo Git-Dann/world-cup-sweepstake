@@ -12,6 +12,8 @@ import {
   runDrawAction,
   resetDrawAction,
   syncNowAction,
+  seedDemoAction,
+  clearAllAction,
 } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -216,6 +218,25 @@ export default async function AdminPage({
               ⚠️ Re-running reshuffles everyone&apos;s teams. Only do this before kick-off.
             </p>
           )}
+        </section>
+
+        {/* Demo & reset */}
+        <section className={card}>
+          <h2 className="mb-2 text-lg font-bold">Demo &amp; reset</h2>
+          <p className="mb-4 text-sm text-slate-400">
+            Load sample teams, players, a draw and results to preview the presentation.
+            Clear everything before going live with real data.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <form action={seedDemoAction}>
+              <button className={primaryBtn} style={{ background: GOLD }}>
+                Load demo data
+              </button>
+            </form>
+            <form action={clearAllAction}>
+              <button className={`${btn} text-red-400`}>Clear all data</button>
+            </form>
+          </div>
         </section>
       </div>
     </div>

@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { signInAdmin, signOutAdmin, isAdmin } from "@/lib/admin-auth";
 import { runDraw, resetDraw } from "@/lib/draw";
 import { syncAll } from "@/lib/tournament-sync";
+import { seedDemo, clearAllData } from "@/lib/demo-seed";
 import { recomputeAllScores } from "@/lib/score-engine";
 import { ensureSettings, getScoring } from "@/lib/settings";
 
@@ -84,5 +85,17 @@ export async function syncNowAction() {
   await ensureSettings();
   await syncAll();
   await recomputeAllScores(await getScoring());
+  refresh();
+}
+
+export async function seedDemoAction() {
+  await assertAdmin();
+  await seedDemo();
+  refresh();
+}
+
+export async function clearAllAction() {
+  await assertAdmin();
+  await clearAllData();
   refresh();
 }
