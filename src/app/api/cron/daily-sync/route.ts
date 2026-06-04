@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { checkCronSecret } from "@/lib/cron-auth";
 import { ensureSettings, getScoring } from "@/lib/settings";
 import { syncAll } from "@/lib/tournament-sync";
+import { syncFromOpenfootball } from "@/lib/openfootball-fallback";
 import { recomputeAllScores } from "@/lib/score-engine";
 import { getLeaderboard } from "@/lib/leaderboard";
 import { fixturesPreviewMessage, leaderboardMessage, postToSlack } from "@/lib/slack";
@@ -21,7 +22,13 @@ async function handle(req: NextRequest) {
   }
 
   const settings = await ensureSettings();
-  const synced = await syncAll();
+  let synced: Record<string, unknown>;
+  try {
+    synced = await syncAll();
+  } catch (e) {
+    console.warn("[daily-sync] football-data failed; trying openfootball fallback:", e);
+    synced = { fallback: await syncFromOpenfootball().catch(() => ({ updated: 0, unmatched: 0 })) };
+  }
   await recomputeAllScores(await getScoring());
 
   const base = process.env.NEXT_PUBLIC_APP_URL ?? "";

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { checkCronSecret } from "@/lib/cron-auth";
 import { ensureSettings, getScoring } from "@/lib/settings";
 import { syncFixtures } from "@/lib/tournament-sync";
+import { syncFromOpenfootball } from "@/lib/openfootball-fallback";
 import { recomputeAllScores } from "@/lib/score-engine";
 import { resultMessage, postToSlack } from "@/lib/slack";
 
@@ -45,7 +46,12 @@ async function handle(req: NextRequest) {
 
   // One call returns the whole tournament; the window gate above means we only
   // hit the API when a match is actually live or recently finished.
-  await syncFixtures();
+  try {
+    await syncFixtures();
+  } catch (e) {
+    console.warn("[poll] football-data failed; trying openfootball fallback:", e);
+    await syncFromOpenfootball().catch((e2) => console.warn("[poll] fallback failed:", e2));
+  }
 
   await recomputeAllScores(await getScoring());
 
