@@ -11,7 +11,7 @@ import { recomputeAllScores } from "@/lib/score-engine";
 import { ensureSettings, getScoring } from "@/lib/settings";
 import { getLeaderboard } from "@/lib/leaderboard";
 import { flagEmojiForTeam } from "@/lib/flags";
-import { drawMessage, resultMessage, postToSlack } from "@/lib/slack";
+import { drawMessage, resultMessage, leaderboardMessage, postToSlack } from "@/lib/slack";
 import { appBaseUrl } from "@/lib/base-url";
 import { matchCardPath, statusLabelFor } from "@/lib/match-card";
 
@@ -148,6 +148,22 @@ export async function repostResultAction(formData: FormData) {
   );
   if (ok) await prisma.fixture.update({ where: { id: f.id }, data: { resultPosted: true } });
   redirect(ok ? "/admin?saved=reposted" : "/admin?error=repost");
+}
+
+// Post the current leaderboard (with the live OG graphic) to Slack on demand —
+// handy after a score correction. Same message the daily cron sends.
+export async function repostLeaderboardAction() {
+  await assertAdmin();
+  const base = appBaseUrl();
+  const rows = await getLeaderboard();
+  const ok = await postToSlack(
+    leaderboardMessage({
+      base,
+      top: rows.slice(0, 5).map((r) => ({ rank: r.rank, name: r.name, total: r.total })),
+      imageUrl: base ? `${base}/api/og/leaderboard?ts=${Date.now()}` : undefined,
+    }),
+  );
+  redirect(ok ? "/admin?saved=lb-posted" : "/admin?error=lb-post");
 }
 
 export async function syncNowAction() {
