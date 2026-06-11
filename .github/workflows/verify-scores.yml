@@ -1,0 +1,24 @@
+name: Verify match scores
+
+# Safety-net pass that runs every 30 min. The live poller (poll.yml) only calls
+# the feed inside a match's live window; this one re-reads results unconditionally
+# (football-data, then TheSportsDB / openfootball fallbacks) so a stuck or missed
+# score self-corrects even when nothing is live. It posts nothing to Slack.
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch: {}
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping the verifier
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          curl -fsS -X POST "$APP_URL/api/cron/verify-scores" \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            && echo "" && echo "verify ok" \
+            || echo "verify failed (non-fatal — self-heals on the next run)"

@@ -2,10 +2,11 @@ import { NextResponse, type NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { checkCronSecret } from "@/lib/cron-auth";
 import { ensureSettings, getScoring } from "@/lib/settings";
-import { syncFixtures } from "@/lib/tournament-sync";
-import { syncFromOpenfootball } from "@/lib/openfootball-fallback";
+import { syncResultsWithFallbacks } from "@/lib/tournament-sync";
 import { recomputeAllScores } from "@/lib/score-engine";
 import { resultMessage, postToSlack } from "@/lib/slack";
+import { appBaseUrl } from "@/lib/base-url";
+import { matchCardPath, statusLabelFor } from "@/lib/match-card";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -33,30 +34,35 @@ async function handle(req: NextRequest) {
 
   const now = Date.now();
   const BEFORE = 20 * 60 * 1000; // start 20 min before kick-off
-  const AFTER = 200 * 60 * 1000; // keep polling ~3h20 after (covers ET + delays)
-  const inWindow = (k: Date) => {
+  const LIVE_AFTER = 200 * 60 * 1000; // near-live polling ~3h20 after (covers ET + delays)
+  // Keep re-checking already-finished fixtures for a day after kick-off. A feed
+  // can flip a match to FINISHED with a stale/early score (or the lagging no-key
+  // fallback writes one), so we must keep re-reading until the result settles —
+  // otherwise a wrong score freezes forever once the match leaves the live window.
+  const VERIFY_AFTER = 24 * 60 * 60 * 1000;
+  const within = (k: Date, after: number) => {
     const t = k.getTime();
-    return t - BEFORE <= now && now <= t + AFTER;
+    return t - BEFORE <= now && now <= t + after;
   };
 
-  const windowFixtures = fixtures.filter((f) => !f.finished && inWindow(f.kickoff));
+  // Poll a fixture while it's live/upcoming, OR while it's freshly finished and
+  // still in the verification tail (so a corrected result flows through).
+  const windowFixtures = fixtures.filter((f) =>
+    f.finished ? within(f.kickoff, VERIFY_AFTER) : within(f.kickoff, LIVE_AFTER),
+  );
   if (!force && windowFixtures.length === 0) {
     return NextResponse.json({ skipped: true, reason: "no live window", apiCalls: 0 });
   }
 
   // One call returns the whole tournament; the window gate above means we only
-  // hit the API when a match is actually live or recently finished.
-  try {
-    await syncFixtures();
-  } catch (e) {
-    console.warn("[poll] football-data failed; trying openfootball fallback:", e);
-    await syncFromOpenfootball().catch((e2) => console.warn("[poll] fallback failed:", e2));
-  }
+  // hit the feed when a match is actually live or recently finished. Falls back
+  // through TheSportsDB and openfootball if football-data is unavailable.
+  await syncResultsWithFallbacks();
 
   await recomputeAllScores(await getScoring());
 
   // Post any newly-finished results.
-  const base = process.env.NEXT_PUBLIC_APP_URL ?? "";
+  const base = appBaseUrl();
   const toPost = await prisma.fixture.findMany({
     where: { finished: true, resultPosted: false },
     include: {
@@ -72,36 +78,14 @@ async function handle(req: NextRequest) {
       await prisma.fixture.update({ where: { id: f.id }, data: { resultPosted: true } });
       continue;
     }
-    const statusLabel =
-      f.duration === "PENALTY_SHOOTOUT"
-        ? "PENALTIES"
-        : f.duration === "EXTRA_TIME"
-          ? "AFTER EXTRA TIME"
-          : "FULL TIME";
-    const note =
-      f.duration === "PENALTY_SHOOTOUT" && f.penHome != null && f.penAway != null
-        ? `${f.penHome}–${f.penAway} on penalties`
-        : "";
-    const mp = new URLSearchParams({
-      home: f.homeTeam.name,
-      away: f.awayTeam.name,
-      hg: String(f.homeGoals ?? 0),
-      ag: String(f.awayGoals ?? 0),
-      round: f.round,
-      ho: f.homeTeam.owner?.name ?? "",
-      ao: f.awayTeam.owner?.name ?? "",
-      hf: f.homeTeam.flagUrl ?? "",
-      af: f.awayTeam.flagUrl ?? "",
-      status: statusLabel,
-      note,
-    });
+    const statusLabel = statusLabelFor(f);
     const ok = await postToSlack(
       resultMessage({
         finished: true,
         statusLabel,
         round: f.round,
         base,
-        imageUrl: base ? `${base}/api/og/match?${mp.toString()}` : undefined,
+        imageUrl: base ? `${base}${matchCardPath(f)}` : undefined,
         home: {
           name: f.homeTeam.name,
           logo: f.homeTeam.logoUrl,

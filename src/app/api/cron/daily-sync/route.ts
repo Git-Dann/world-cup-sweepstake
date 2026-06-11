@@ -2,12 +2,12 @@ import { NextResponse, type NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { checkCronSecret } from "@/lib/cron-auth";
 import { ensureSettings, getScoring } from "@/lib/settings";
-import { syncAll } from "@/lib/tournament-sync";
-import { syncFromOpenfootball } from "@/lib/openfootball-fallback";
+import { syncAll, syncResultsWithFallbacks } from "@/lib/tournament-sync";
 import { recomputeAllScores } from "@/lib/score-engine";
 import { getLeaderboard } from "@/lib/leaderboard";
 import { fixturesPreviewMessage, leaderboardMessage, postToSlack } from "@/lib/slack";
 import { londonDate, londonTime, londonDateLabel } from "@/lib/dates";
+import { appBaseUrl } from "@/lib/base-url";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -26,12 +26,12 @@ async function handle(req: NextRequest) {
   try {
     synced = await syncAll();
   } catch (e) {
-    console.warn("[daily-sync] football-data failed; trying openfootball fallback:", e);
-    synced = { fallback: await syncFromOpenfootball().catch(() => ({ updated: 0, unmatched: 0 })) };
+    console.warn("[daily-sync] full sync failed; falling back to results-only:", e);
+    synced = { fallbackSource: await syncResultsWithFallbacks() };
   }
   await recomputeAllScores(await getScoring());
 
-  const base = process.env.NEXT_PUBLIC_APP_URL ?? "";
+  const base = appBaseUrl();
   const today = londonDate(new Date());
 
   // Today's fixtures preview

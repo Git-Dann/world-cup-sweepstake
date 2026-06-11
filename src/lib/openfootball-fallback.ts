@@ -1,35 +1,10 @@
 import { prisma } from "@/lib/prisma";
+import { pairKey, key, dateKey } from "@/lib/team-match";
 
 // Free, no-key fallback results feed (volunteer-updated, so it can lag). Used ONLY
-// when football-data.org is unreachable — fills any not-yet-finished fixture whose
+// when the API feeds are unreachable — fills any not-yet-finished fixture whose
 // team-pair (and date) matches an openfootball match that has a score.
 const URL_2026 = "https://raw.githubusercontent.com/openfootball/worldcup.json/master/2026/worldcup.json";
-
-function norm(s: string): string {
-  return s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z]/g, "");
-}
-
-// Reconcile the few names that differ between openfootball and football-data.
-const ALIAS: Record<string, string> = {
-  unitedstates: "usa",
-  korearepublic: "southkorea",
-  czechia: "czech",
-  czechrepublic: "czech",
-  iriran: "iran",
-  cotedivoire: "ivorycoast",
-  caboverde: "capeverde",
-  congodr: "drcongo",
-};
-function key(s: string): string {
-  const n = norm(s);
-  return ALIAS[n] ?? n;
-}
-function pairKey(a: string, b: string): string {
-  return [key(a), key(b)].sort().join("|");
-}
-function dateKey(d: Date | string): string {
-  return (typeof d === "string" ? d : d.toISOString()).slice(0, 10);
-}
 
 type OfMatch = {
   date?: string;

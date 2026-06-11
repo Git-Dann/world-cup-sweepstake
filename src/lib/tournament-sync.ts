@@ -8,6 +8,8 @@ import {
 } from "@/lib/football-data";
 import { ensureSettings } from "@/lib/settings";
 import { flagUrlForTeam } from "@/lib/flags";
+import { syncFromTheSportsDB } from "@/lib/thesportsdb-fallback";
+import { syncFromOpenfootball } from "@/lib/openfootball-fallback";
 
 // Upsert the teams (name, code, crest) and assign group letters from standings.
 export async function syncTeamsAndGroups() {
@@ -77,6 +79,26 @@ export async function syncFixtures() {
   }
 
   return count;
+}
+
+// Results sync with graceful fallbacks: primary football-data.org, then the
+// second API (TheSportsDB), then the no-key openfootball feed. Returns the source
+// that actually provided the data. Use this anywhere we just need scores refreshed.
+export async function syncResultsWithFallbacks(): Promise<string> {
+  try {
+    await syncFixtures();
+    return "football-data";
+  } catch (e) {
+    console.warn("[sync] football-data failed; trying TheSportsDB:", e);
+  }
+  try {
+    await syncFromTheSportsDB();
+    return "thesportsdb";
+  } catch (e) {
+    console.warn("[sync] TheSportsDB failed; trying openfootball:", e);
+  }
+  await syncFromOpenfootball().catch((e) => console.warn("[sync] openfootball failed:", e));
+  return "openfootball";
 }
 
 // Full sync: teams + groups, then fixtures. Used by the daily cron + admin "Sync now".
