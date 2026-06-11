@@ -2,10 +2,11 @@ import { NextResponse, type NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { checkCronSecret } from "@/lib/cron-auth";
 import { ensureSettings, getScoring } from "@/lib/settings";
-import { syncFixtures } from "@/lib/tournament-sync";
-import { syncFromOpenfootball } from "@/lib/openfootball-fallback";
+import { syncResultsWithFallbacks } from "@/lib/tournament-sync";
 import { recomputeAllScores } from "@/lib/score-engine";
 import { resultMessage, postToSlack } from "@/lib/slack";
+import { appBaseUrl } from "@/lib/base-url";
+import { matchCardPath, statusLabelFor } from "@/lib/match-card";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -54,18 +55,14 @@ async function handle(req: NextRequest) {
   }
 
   // One call returns the whole tournament; the window gate above means we only
-  // hit the API when a match is actually live or recently finished.
-  try {
-    await syncFixtures();
-  } catch (e) {
-    console.warn("[poll] football-data failed; trying openfootball fallback:", e);
-    await syncFromOpenfootball().catch((e2) => console.warn("[poll] fallback failed:", e2));
-  }
+  // hit the feed when a match is actually live or recently finished. Falls back
+  // through TheSportsDB and openfootball if football-data is unavailable.
+  await syncResultsWithFallbacks();
 
   await recomputeAllScores(await getScoring());
 
   // Post any newly-finished results.
-  const base = process.env.NEXT_PUBLIC_APP_URL ?? "";
+  const base = appBaseUrl();
   const toPost = await prisma.fixture.findMany({
     where: { finished: true, resultPosted: false },
     include: {
@@ -81,36 +78,14 @@ async function handle(req: NextRequest) {
       await prisma.fixture.update({ where: { id: f.id }, data: { resultPosted: true } });
       continue;
     }
-    const statusLabel =
-      f.duration === "PENALTY_SHOOTOUT"
-        ? "PENALTIES"
-        : f.duration === "EXTRA_TIME"
-          ? "AFTER EXTRA TIME"
-          : "FULL TIME";
-    const note =
-      f.duration === "PENALTY_SHOOTOUT" && f.penHome != null && f.penAway != null
-        ? `${f.penHome}–${f.penAway} on penalties`
-        : "";
-    const mp = new URLSearchParams({
-      home: f.homeTeam.name,
-      away: f.awayTeam.name,
-      hg: String(f.homeGoals ?? 0),
-      ag: String(f.awayGoals ?? 0),
-      round: f.round,
-      ho: f.homeTeam.owner?.name ?? "",
-      ao: f.awayTeam.owner?.name ?? "",
-      hf: f.homeTeam.flagUrl ?? "",
-      af: f.awayTeam.flagUrl ?? "",
-      status: statusLabel,
-      note,
-    });
+    const statusLabel = statusLabelFor(f);
     const ok = await postToSlack(
       resultMessage({
         finished: true,
         statusLabel,
         round: f.round,
         base,
-        imageUrl: base ? `${base}/api/og/match?${mp.toString()}` : undefined,
+        imageUrl: base ? `${base}${matchCardPath(f)}` : undefined,
         home: {
           name: f.homeTeam.name,
           logo: f.homeTeam.logoUrl,

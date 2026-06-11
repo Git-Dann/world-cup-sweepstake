@@ -63,13 +63,18 @@ export default async function AdminPage({
   }
 
   const settings = await ensureSettings();
-  const [players, teamCount, ownedCount] = await Promise.all([
+  const [players, teamCount, ownedCount, results] = await Promise.all([
     prisma.player.findMany({
       include: { _count: { select: { teams: true } } },
       orderBy: { name: "asc" },
     }),
     prisma.team.count(),
     prisma.team.count({ where: { ownerId: { not: null } } }),
+    prisma.fixture.findMany({
+      where: { finished: true },
+      include: { homeTeam: true, awayTeam: true },
+      orderBy: { kickoff: "desc" },
+    }),
   ]);
   const drawDone = !!settings.drawCompletedAt;
 
@@ -224,6 +229,53 @@ export default async function AdminPage({
             <p className="mt-3 text-xs text-amber-400/80">
               ⚠️ Re-running reshuffles everyone&apos;s teams — post again afterwards to update the channel.
             </p>
+          )}
+        </section>
+
+        {/* Match results — re-post a (corrected) result card to Slack */}
+        <section className={card}>
+          <h2 className="mb-2 text-lg font-bold">
+            Match results <span className="text-slate-500">({results.length})</span>
+          </h2>
+          <p className="mb-4 text-sm text-slate-400">
+            Re-post a finished match to #world-cup — handy after a score correction. You&apos;ll see a
+            preview of the card and text before anything is sent.
+          </p>
+          {sp?.saved === "reposted" && (
+            <p className="mb-3 text-sm font-medium text-green-400">✓ Result re-posted to #world-cup</p>
+          )}
+          {sp?.error === "repost" && (
+            <p className="mb-3 text-sm font-medium text-red-400">
+              Couldn&apos;t post — check SLACK_WEBHOOK_URL is set.
+            </p>
+          )}
+          {results.length === 0 ? (
+            <p className="text-sm text-slate-500">No finished matches yet.</p>
+          ) : (
+            <ul className="flex flex-col">
+              {results.map((f) => (
+                <li
+                  key={f.id}
+                  className="flex items-center gap-3 border-b border-white/5 py-2.5 text-sm"
+                >
+                  <span className="flex-1 truncate">
+                    {f.homeTeam?.name ?? "TBD"}{" "}
+                    <span className="font-semibold text-white">
+                      {f.homeGoals ?? 0}–{f.awayGoals ?? 0}
+                    </span>{" "}
+                    {f.awayTeam?.name ?? "TBD"}
+                    <span className="ml-2 text-xs text-slate-500">{f.round}</span>
+                  </span>
+                  {f.resultPosted && <span className="text-xs text-slate-500">posted</span>}
+                  <Link
+                    href={`/admin/repost/${f.id}`}
+                    className="rounded-lg px-3 py-1.5 text-xs font-medium ring-1 ring-white/10 hover:bg-white/5"
+                  >
+                    Preview & re-post
+                  </Link>
+                </li>
+              ))}
+            </ul>
           )}
         </section>
 

@@ -11,7 +11,9 @@ import { recomputeAllScores } from "@/lib/score-engine";
 import { ensureSettings, getScoring } from "@/lib/settings";
 import { getLeaderboard } from "@/lib/leaderboard";
 import { flagEmojiForTeam } from "@/lib/flags";
-import { drawMessage, postToSlack } from "@/lib/slack";
+import { drawMessage, resultMessage, postToSlack } from "@/lib/slack";
+import { appBaseUrl } from "@/lib/base-url";
+import { matchCardPath, statusLabelFor } from "@/lib/match-card";
 
 async function assertAdmin() {
   if (!(await isAdmin())) throw new Error("Not authorised");
@@ -103,6 +105,49 @@ export async function resetDrawAction() {
   await assertAdmin();
   await resetDraw();
   refresh();
+}
+
+// Re-post a finished match's result card to Slack (always with the OG graphic).
+// Used to push a corrected score after a re-sync. Goes through the same
+// resultMessage path as the live poller so the post looks identical.
+export async function repostResultAction(formData: FormData) {
+  await assertAdmin();
+  const id = String(formData.get("fixtureId") ?? "");
+  const f = await prisma.fixture.findUnique({
+    where: { id },
+    include: {
+      homeTeam: { include: { owner: true } },
+      awayTeam: { include: { owner: true } },
+    },
+  });
+  if (!f || !f.homeTeam || !f.awayTeam) redirect("/admin?error=repost");
+
+  const base = appBaseUrl();
+  const ok = await postToSlack(
+    resultMessage({
+      finished: true,
+      statusLabel: statusLabelFor(f),
+      round: f.round,
+      base,
+      imageUrl: base ? `${base}${matchCardPath(f)}` : undefined,
+      home: {
+        name: f.homeTeam.name,
+        logo: f.homeTeam.logoUrl,
+        goals: f.homeGoals,
+        owner: f.homeTeam.owner?.name ?? null,
+        points: f.homeTeam.points,
+      },
+      away: {
+        name: f.awayTeam.name,
+        logo: f.awayTeam.logoUrl,
+        goals: f.awayGoals,
+        owner: f.awayTeam.owner?.name ?? null,
+        points: f.awayTeam.points,
+      },
+    }),
+  );
+  if (ok) await prisma.fixture.update({ where: { id: f.id }, data: { resultPosted: true } });
+  redirect(ok ? "/admin?saved=reposted" : "/admin?error=repost");
 }
 
 export async function syncNowAction() {
