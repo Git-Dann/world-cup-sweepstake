@@ -232,6 +232,26 @@ export default async function AdminPage({
           )}
         </section>
 
+        {/* Leaderboard — post the standings graphic to Slack on demand */}
+        <section className={card}>
+          <h2 className="mb-2 text-lg font-bold">Leaderboard</h2>
+          <p className="mb-4 text-sm text-slate-400">
+            Post the current standings graphic to #world-cup — handy after a score correction.
+            You&apos;ll see a preview before anything is sent.
+          </p>
+          {sp?.saved === "lb-posted" && (
+            <p className="mb-3 text-sm font-medium text-green-400">✓ Leaderboard posted to #world-cup</p>
+          )}
+          {sp?.error === "lb-post" && (
+            <p className="mb-3 text-sm font-medium text-red-400">
+              Couldn&apos;t post — check SLACK_WEBHOOK_URL is set.
+            </p>
+          )}
+          <Link href="/admin/leaderboard" className={primaryBtn} style={{ background: GOLD }}>
+            Preview &amp; post leaderboard
+          </Link>
+        </section>
+
         {/* Match results — re-post a (corrected) result card to Slack */}
         <section className={card}>
           <h2 className="mb-2 text-lg font-bold">
