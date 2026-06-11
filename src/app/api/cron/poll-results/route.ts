@@ -33,13 +33,22 @@ async function handle(req: NextRequest) {
 
   const now = Date.now();
   const BEFORE = 20 * 60 * 1000; // start 20 min before kick-off
-  const AFTER = 200 * 60 * 1000; // keep polling ~3h20 after (covers ET + delays)
-  const inWindow = (k: Date) => {
+  const LIVE_AFTER = 200 * 60 * 1000; // near-live polling ~3h20 after (covers ET + delays)
+  // Keep re-checking already-finished fixtures for a day after kick-off. A feed
+  // can flip a match to FINISHED with a stale/early score (or the lagging no-key
+  // fallback writes one), so we must keep re-reading until the result settles —
+  // otherwise a wrong score freezes forever once the match leaves the live window.
+  const VERIFY_AFTER = 24 * 60 * 60 * 1000;
+  const within = (k: Date, after: number) => {
     const t = k.getTime();
-    return t - BEFORE <= now && now <= t + AFTER;
+    return t - BEFORE <= now && now <= t + after;
   };
 
-  const windowFixtures = fixtures.filter((f) => !f.finished && inWindow(f.kickoff));
+  // Poll a fixture while it's live/upcoming, OR while it's freshly finished and
+  // still in the verification tail (so a corrected result flows through).
+  const windowFixtures = fixtures.filter((f) =>
+    f.finished ? within(f.kickoff, VERIFY_AFTER) : within(f.kickoff, LIVE_AFTER),
+  );
   if (!force && windowFixtures.length === 0) {
     return NextResponse.json({ skipped: true, reason: "no live window", apiCalls: 0 });
   }
