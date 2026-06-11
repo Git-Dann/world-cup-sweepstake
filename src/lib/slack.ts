@@ -84,7 +84,10 @@ export function resultMessage(args: {
   };
 }
 
-// The standings, with the rendered leaderboard image.
+// The standings. The rendered image is the live source of truth, so when we have
+// it that's all we show — a baked-in text list would be a stale snapshot (computed
+// at post time) that can disagree with the live-rendered image. The text list is
+// kept only as a fallback for when no image URL is available.
 export function leaderboardMessage(args: {
   base: string;
   title?: string;
@@ -92,16 +95,19 @@ export function leaderboardMessage(args: {
   imageUrl?: string;
 }) {
   const title = args.title ?? "🏆 World Cup Sweepstake — Leaderboard";
-  const medal = (r: number) => (r === 1 ? "🥇" : r === 2 ? "🥈" : r === 3 ? "🥉" : `${r}.`);
-  const lines =
-    args.top.map((t) => `${medal(t.rank)} *${t.name}* — ${pts(t.total)}`).join("\n") ||
-    "_No scores yet._";
 
   const blocks: SlackBlock[] = [
     { type: "header", text: { type: "plain_text", text: title, emoji: true } },
   ];
-  if (args.imageUrl) blocks.push({ type: "image", image_url: args.imageUrl, alt_text: "Leaderboard" });
-  blocks.push({ type: "section", text: { type: "mrkdwn", text: lines } });
+  if (args.imageUrl) {
+    blocks.push({ type: "image", image_url: args.imageUrl, alt_text: "Leaderboard" });
+  } else {
+    const medal = (r: number) => (r === 1 ? "🥇" : r === 2 ? "🥈" : r === 3 ? "🥉" : `${r}.`);
+    const lines =
+      args.top.map((t) => `${medal(t.rank)} *${t.name}* — ${pts(t.total)}`).join("\n") ||
+      "_No scores yet._";
+    blocks.push({ type: "section", text: { type: "mrkdwn", text: lines } });
+  }
   const footer = linkBlock(args.base);
   if (footer) blocks.push(footer);
 
