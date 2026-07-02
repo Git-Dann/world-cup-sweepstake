@@ -51,6 +51,7 @@ export async function runDraw() {
   }
 
   await prisma.$transaction([
+    prisma.extraTeam.deleteMany({}),
     prisma.team.updateMany({ data: { ownerId: null } }),
     ...teams.map((t) =>
       prisma.team.update({ where: { id: t.id }, data: { ownerId: owner.get(t.id) ?? null } }),
@@ -58,12 +59,52 @@ export async function runDraw() {
     prisma.setting.update({ where: { id: 1 }, data: { drawCompletedAt: new Date() } }),
   ]);
 
+  // The pot draw balances team strength but still leaves single-team players on
+  // one team. Top everyone up to two so the leaderboard is fair by count too.
+  await ensureSecondTeams();
+
   return { players: players.length, teams: teams.length };
 }
 
 export async function resetDraw() {
   await prisma.$transaction([
+    prisma.extraTeam.deleteMany({}),
     prisma.team.updateMany({ data: { ownerId: null } }),
     prisma.setting.update({ where: { id: 1 }, data: { drawCompletedAt: null } }),
   ]);
+}
+
+// Idempotent: ensure every player holds at least two teams. Players who only
+// drew one get topped up with a random co-owned "second team" (any team they
+// don't already hold — eliminated or not, it's a fair random draw). Once a
+// player has two teams this is a no-op, so it's safe to run on every sync.
+export async function ensureSecondTeams(target = 2) {
+  // Only meaningful once the draw has happened — before that no one owns a
+  // team, and topping up would hand out teams that the draw is about to assign.
+  const setting = await prisma.setting.findUnique({ where: { id: 1 } });
+  if (!setting?.drawCompletedAt) return { assigned: 0 };
+
+  const players = await prisma.player.findMany({
+    include: { teams: { select: { id: true } }, extraTeams: { select: { teamId: true } } },
+  });
+  const allTeamIds = (await prisma.team.findMany({ select: { id: true } })).map((t) => t.id);
+  if (allTeamIds.length < target) return { assigned: 0 };
+
+  const toCreate: { playerId: string; teamId: string }[] = [];
+  for (const p of players) {
+    const held = new Set<string>([
+      ...p.teams.map((t) => t.id),
+      ...p.extraTeams.map((e) => e.teamId),
+    ]);
+    while (held.size < target) {
+      const pool = allTeamIds.filter((id) => !held.has(id));
+      if (pool.length === 0) break;
+      const pick = pool[Math.floor(Math.random() * pool.length)];
+      held.add(pick);
+      toCreate.push({ playerId: p.id, teamId: pick });
+    }
+  }
+
+  if (toCreate.length) await prisma.extraTeam.createMany({ data: toCreate });
+  return { assigned: toCreate.length };
 }

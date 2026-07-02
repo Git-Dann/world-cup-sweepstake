@@ -4,6 +4,7 @@ import { checkCronSecret } from "@/lib/cron-auth";
 import { ensureSettings, getScoring } from "@/lib/settings";
 import { syncAll, syncResultsWithFallbacks } from "@/lib/tournament-sync";
 import { recomputeAllScores } from "@/lib/score-engine";
+import { ensureSecondTeams } from "@/lib/draw";
 import { getLeaderboard } from "@/lib/leaderboard";
 import { fixturesPreviewMessage, leaderboardMessage, postToSlack } from "@/lib/slack";
 import { londonDate, londonTime, londonDateLabel } from "@/lib/dates";
@@ -29,6 +30,7 @@ async function handle(req: NextRequest) {
     console.warn("[daily-sync] full sync failed; falling back to results-only:", e);
     synced = { fallbackSource: await syncResultsWithFallbacks() };
   }
+  await ensureSecondTeams();
   await recomputeAllScores(await getScoring());
 
   const base = appBaseUrl();

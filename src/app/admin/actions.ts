@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { signInAdmin, signOutAdmin, isAdmin } from "@/lib/admin-auth";
-import { runDraw, resetDraw } from "@/lib/draw";
+import { runDraw, resetDraw, ensureSecondTeams } from "@/lib/draw";
 import { syncAll } from "@/lib/tournament-sync";
 import { seedDemo, clearAllData } from "@/lib/demo-seed";
 import { recomputeAllScores } from "@/lib/score-engine";
@@ -170,6 +170,7 @@ export async function syncNowAction() {
   await assertAdmin();
   await ensureSettings();
   await syncAll();
+  await ensureSecondTeams();
   await recomputeAllScores(await getScoring());
   refresh();
 }

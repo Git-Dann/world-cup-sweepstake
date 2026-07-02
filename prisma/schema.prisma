@@ -11,11 +11,12 @@ datasource db {
 
 // A person in the office playing the sweepstake
 model Player {
-  id        String   @id @default(cuid())
-  name      String
-  paid      Boolean  @default(false)
-  teams     Team[]
-  createdAt DateTime @default(now())
+  id         String      @id @default(cuid())
+  name       String
+  paid       Boolean     @default(false)
+  teams      Team[] // teams this player is the primary owner of
+  extraTeams ExtraTeam[] // shared second teams, to level 1-team vs 2-team players
+  createdAt  DateTime    @default(now())
 }
 
 // A national team in the tournament (48 of them)
@@ -37,7 +38,24 @@ model Team {
   homeFixtures Fixture[]    @relation("HomeTeam")
   awayFixtures Fixture[]    @relation("AwayTeam")
   scoreEvents  ScoreEvent[]
+  extraOwners  ExtraTeam[] // players who hold this as a shared second team
   createdAt    DateTime     @default(now())
+}
+
+// A shared "second team" assignment. Players who only drew one team in the
+// draw are topped up to two via a random co-owned team, so the leaderboard is
+// fair whether you hold one or two teams. A team may appear here for several
+// players (co-ownership); its points count towards each of their totals.
+model ExtraTeam {
+  id        String   @id @default(cuid())
+  playerId  String
+  player    Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  teamId    String
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([playerId, teamId])
+  @@index([playerId])
 }
 
 // A match
@@ -70,7 +88,7 @@ model ScoreEvent {
   teamId    String
   team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
   fixtureId String?
-  kind      String // GROUP_WIN, GROUP_DRAW, REACH_R32, REACH_R16, REACH_QF, REACH_SF, REACH_FINAL, WIN_CUP, GOAL
+  kind      String // WIN, DRAW, GOAL
   points    Int
   note      String?
   createdAt DateTime @default(now())

@@ -175,7 +175,7 @@ function Groups({ groups }: { groups: { group: string; teams: GroupTeam[] }[] })
       {groups.map(({ group, teams }) => (
         <div key={group} className="rounded-2xl bg-[#141a30] p-4 ring-1 ring-white/5">
           <div className="mb-3 inline-flex rounded-md px-2 py-0.5 text-sm font-bold uppercase tracking-wider" style={{ background: "rgba(245,197,24,.15)", color: GOLD }}>
-            {group === "TBD" ? "Unassigned" : `Group ${group}`}
+            {group === "TBD" ? "Unassigned" : group}
           </div>
           <div className="flex flex-col gap-2">
             {teams.map((t) => (

@@ -1,7 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import {
   roundKeyFromApi,
-  reachBonus,
   ROUND_ORDER,
   ROUND_LABELS,
   type ScoringConfig,
@@ -19,6 +18,11 @@ type Ev = {
 // Idempotent full recompute: rebuilds the ScoreEvent ledger and each team's
 // total from scratch off the current fixtures. Safe to run on every poll —
 // re-running never double-counts.
+//
+// Scoring is pure win/draw/loss on EVERY match (group and knockout):
+//   win = scoring.groupWin (3), draw = scoring.groupDraw (1), loss = 0.
+// A knockout decided on penalties counts as a win for the team that advances.
+// There are no round-progression or cup bonuses.
 export async function recomputeAllScores(scoring: ScoringConfig) {
   const teams = await prisma.team.findMany();
   const fixtures = await prisma.fixture.findMany();
@@ -28,7 +32,6 @@ export async function recomputeAllScores(scoring: ScoringConfig) {
   const totals = new Map<string, number>();
   const reached = new Map<string, RoundKey>();
   const exitRound = new Map<string, string>(); // teamId -> round label where knocked out
-  const awardedReach = new Set<string>(); // `${teamId}:${roundKey}`
 
   const add = (
     teamId: string,
@@ -46,26 +49,27 @@ export async function recomputeAllScores(scoring: ScoringConfig) {
     if (ROUND_ORDER[rk] > ROUND_ORDER[cur]) reached.set(teamId, rk);
   };
 
+  // Award a win to one side and a loss (0 pts) to the other; the loser exits.
+  const settleWin = (
+    f: { id: string },
+    rkLabel: string,
+    winnerId: string | null,
+    loserId: string | null,
+  ) => {
+    if (winnerId) add(winnerId, f.id, "WIN", scoring.groupWin, `Win — ${rkLabel}`);
+    if (loserId) exitRound.set(loserId, rkLabel);
+  };
+
   for (const f of fixtures) {
     const rk = roundKeyFromApi(f.round);
     const home = f.homeTeamId;
     const away = f.awayTeamId;
 
-    // Reach bonus: awarded as soon as a team APPEARS in a knockout fixture
-    // (i.e. they qualified for that round). Deduped per (team, round).
+    // Track furthest round reached (for the "alive" display only — reaching a
+    // round no longer awards any points).
     if (rk !== "GROUP") {
-      for (const teamId of [home, away]) {
-        if (!teamId) continue;
-        bumpReached(teamId, rk);
-        const key = `${teamId}:${rk}`;
-        if (!awardedReach.has(key)) {
-          const rb = reachBonus(rk, scoring);
-          if (rb) {
-            add(teamId, f.id, rb.kind, rb.points, `Reached ${ROUND_LABELS[rk]}`);
-            awardedReach.add(key);
-          }
-        }
-      }
+      if (home) bumpReached(home, rk);
+      if (away) bumpReached(away, rk);
     }
 
     if (!f.finished) continue;
@@ -79,24 +83,29 @@ export async function recomputeAllScores(scoring: ScoringConfig) {
 
     if (rk === "GROUP") {
       if (hg === ag) {
-        if (home) add(home, f.id, "GROUP_DRAW", scoring.groupDraw, "Group draw");
-        if (away) add(away, f.id, "GROUP_DRAW", scoring.groupDraw, "Group draw");
+        if (home) add(home, f.id, "DRAW", scoring.groupDraw, "Draw");
+        if (away) add(away, f.id, "DRAW", scoring.groupDraw, "Draw");
       } else {
         const homeWon = hg > ag;
-        if (homeWon && home) add(home, f.id, "GROUP_WIN", scoring.groupWin, "Group win");
-        if (!homeWon && away) add(away, f.id, "GROUP_WIN", scoring.groupWin, "Group win");
+        if (homeWon && home) add(home, f.id, "WIN", scoring.groupWin, "Win");
+        if (!homeWon && away) add(away, f.id, "WIN", scoring.groupWin, "Win");
       }
-    } else {
-      // Knockout: the loser exits here; the Final winner takes the cup.
-      const winnerTeam = f.winnerTeamApiId ? teamByApi.get(f.winnerTeamApiId) : undefined;
-      if (winnerTeam) {
-        const loserId = winnerTeam.id === home ? away : home;
-        if (loserId) exitRound.set(loserId, ROUND_LABELS[rk]);
-        if (rk === "FINAL") {
-          add(winnerTeam.id, f.id, "WIN_CUP", scoring.winCup, "Won the World Cup 🏆");
-        }
-      }
+      continue;
     }
+
+    // Knockout: the team that advances gets the win (penalties included); the
+    // other is knocked out. Prefer the explicit winner id; fall back to goals.
+    const label = ROUND_LABELS[rk];
+    const winnerTeam = f.winnerTeamApiId ? teamByApi.get(f.winnerTeamApiId) : undefined;
+    if (winnerTeam) {
+      const winnerId = winnerTeam.id;
+      settleWin(f, label, winnerId, winnerId === home ? away : home);
+    } else if (hg !== ag) {
+      const homeWon = hg > ag;
+      settleWin(f, label, homeWon ? home : away, homeWon ? away : home);
+    }
+    // If a knockout is finished but has no winner and is level on goals, we
+    // can't tell who advanced — award nothing until the data resolves.
   }
 
   await prisma.$transaction([

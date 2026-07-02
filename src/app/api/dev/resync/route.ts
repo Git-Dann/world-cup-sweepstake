@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { checkCronSecret } from "@/lib/cron-auth";
 import { syncAll } from "@/lib/tournament-sync";
 import { recomputeAllScores } from "@/lib/score-engine";
+import { ensureSecondTeams } from "@/lib/draw";
 import { getScoring } from "@/lib/settings";
 
 export const runtime = "nodejs";
@@ -15,6 +16,7 @@ async function handle(req: NextRequest) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
   const synced = await syncAll();
+  await ensureSecondTeams();
   await recomputeAllScores(await getScoring());
   return NextResponse.json({ ok: true, ...synced });
 }

@@ -4,6 +4,7 @@ import { checkCronSecret } from "@/lib/cron-auth";
 import { ensureSettings, getScoring } from "@/lib/settings";
 import { syncResultsWithFallbacks } from "@/lib/tournament-sync";
 import { recomputeAllScores } from "@/lib/score-engine";
+import { ensureSecondTeams } from "@/lib/draw";
 import { resultMessage, postToSlack } from "@/lib/slack";
 import { appBaseUrl } from "@/lib/base-url";
 import { matchCardPath, statusLabelFor } from "@/lib/match-card";
@@ -59,6 +60,7 @@ async function handle(req: NextRequest) {
   // through TheSportsDB and openfootball if football-data is unavailable.
   await syncResultsWithFallbacks();
 
+  await ensureSecondTeams();
   await recomputeAllScores(await getScoring());
 
   // Post any newly-finished results.

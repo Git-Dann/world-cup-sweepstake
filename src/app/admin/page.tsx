@@ -65,7 +65,7 @@ export default async function AdminPage({
   const settings = await ensureSettings();
   const [players, teamCount, ownedCount, results] = await Promise.all([
     prisma.player.findMany({
-      include: { _count: { select: { teams: true } } },
+      include: { _count: { select: { teams: true, extraTeams: true } } },
       orderBy: { name: "asc" },
     }),
     prisma.team.count(),
@@ -129,7 +129,7 @@ export default async function AdminPage({
               {players.map((p) => (
                 <li key={p.id} className="flex items-center gap-3 border-b border-white/5 py-2.5">
                   <span className="flex-1 truncate">{p.name}</span>
-                  {drawDone && <span className="text-xs text-slate-500">{p._count.teams} teams</span>}
+                  {drawDone && <span className="text-xs text-slate-500">{p._count.teams + p._count.extraTeams} teams</span>}
                   <RemovePlayerButton id={p.id} name={p.name} action={removePlayerAction} />
                 </li>
               ))}
